@@ -27,6 +27,7 @@ class UAV:
         self.y = self.init_y
         self.v_x = 0
         self.v_y = 0
+        self.obs = []
         self.energy = 1
 
     # 计算执行某个行为的能量损耗(绝对值)

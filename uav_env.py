@@ -127,8 +127,8 @@ class UAV_ENV:
         # 初始化渲染
         self.render = UAV_ENV_Render(pois=self.pois, obstacles=self.obstacles)
         self.is_render = False # 默认不开启渲染
-        # 环境是否共享奖励值，默认为不共享
-        self.share_reward = False
+        # 环境是否共享奖励值，默认为共享
+        self.share_reward = True
 
     # 重置环境状态
     def reset(self):
@@ -234,6 +234,9 @@ if __name__ == "__main__":
     env.reset()
     while True:
         actions = []
+        '''
+        action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
+        '''
         for uav in env.uavs:
             actions.extend(2 * uav.v_max * np.random.random(2) - uav.v_max)
         obs, reward, done, _ = env.step(actions)
