@@ -1,16 +1,16 @@
 # --------------------------------------------------------
 # 搭建UAV的强化学习环境
 # --------------------------------------------------------
-import Common
+import common
 import cv2
 import numpy as np
 from uav import UAV
 from poi import PoI
 
 
-class UAV_ENV_Render:
+class UavEnvRender:
     # 初始化，根据输入值生成一张空白图
-    def __init__(self, height=Common.DEFAULT_HEIGHT, width=Common.DEFAULT_WIDTH, pois=[], obstacles=[], uavs=[]):
+    def __init__(self, height=common.DEFAULT_HEIGHT, width=common.DEFAULT_WIDTH, pois=[], obstacles=[], uavs=[]):
         self.height = height
         self.width = width
         # 生成一张默认大小为 1000x1000 的空白图
@@ -40,9 +40,9 @@ class UAV_ENV_Render:
     # 更新兴趣点状态
     def draw_poi(self, poi):
         if poi.done == 1:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, Common.POI_COLOR_OVER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_OVER, -1)
         else:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, Common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_GATHER, -1)
 
     # 绘制无人机
     def draw_uavs(self, uavs):
@@ -51,12 +51,12 @@ class UAV_ENV_Render:
 
     # 更新无人机状态
     def draw_uav(self, uav):
-        cv2.circle(self.image, (int(uav.x), int(uav.y)), 5, uav.color, -1)
+        cv2.circle(self.image, (int(uav.x), int(uav.y)), 2, uav.color, -1)
 
     # 绘制障碍物
     def draw_obs(self, obstacles):
         for obs in obstacles:
-            cv2.circle(self.image, (int(obs[0]), int(obs[1])), 1, Common.OBS_COLOR, -1)
+            cv2.circle(self.image, (int(obs[0]), int(obs[1])), 1, common.OBS_COLOR, -1)
 
 
 class ObservationSpace:
@@ -110,7 +110,7 @@ class ActionSpace:
             self.actions.extend(l)
 
 
-class UAV_ENV:
+class UavEnvironment:
     def __init__(self, pois, obstacles, uav_num):
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
         self.init_pois = pois
@@ -125,7 +125,7 @@ class UAV_ENV:
         for uav in self.uavs:
             uav.obs = self.obsvervation_space.observations
         # 初始化渲染
-        self.render = UAV_ENV_Render(pois=self.pois, obstacles=self.obstacles)
+        self.render = UavEnvRender(pois=self.pois, obstacles=self.obstacles)
         self.is_render = False # 默认不开启渲染
         # 环境是否共享奖励值，默认为共享
         self.share_reward = True
@@ -230,7 +230,7 @@ class UAV_ENV:
 if __name__ == "__main__":
     pois = np.load("Data/pois.npy", allow_pickle=True)
     obstacles = np.load("Data/obstacles.npy")
-    env = UAV_ENV(pois, obstacles, 3)
+    env = UavEnvironment(pois, obstacles, 3)
     env.reset()
     while True:
         actions = []
