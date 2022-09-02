@@ -51,7 +51,7 @@ class UAV_ENV_Render:
 
     # 更新无人机状态
     def draw_uav(self, uav):
-        cv2.circle(self.image, (int(uav.x), int(uav.y)), 2, uav.color, -1)
+        cv2.circle(self.image, (int(uav.x), int(uav.y)), 5, uav.color, -1)
 
     # 绘制障碍物
     def draw_obs(self, obstacles):
