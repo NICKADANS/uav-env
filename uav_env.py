@@ -102,12 +102,12 @@ class ObservationSpace:
 class ActionSpace:
     def __init__(self, uavs):
         # 行为空间维度
-        self.dim = len(uavs) * 2  # 需要得到所有无人机的速度
+        self.dim = 2  # 需要得到所有无人机的速度
         # 行为空间内容:所有UAV的速度
         self.actions = []
         for uav in uavs:
             l = [uav.v_x, uav.v_y]
-            self.actions.extend(l)
+            self.actions.append(l)
 
 
 class UavEnvironment:
@@ -141,7 +141,8 @@ class UavEnvironment:
             uav.obs = self.obsvervation_space.observations
         # 重置渲染
         self.render.reset()
-        return self.obsvervation_space.observations
+        new_state_n = [self.obsvervation_space.observations for _ in range(len(self.uavs))]
+        return new_state_n
 
     # 执行行为
     def step(self, actions):
@@ -176,36 +177,29 @@ class UavEnvironment:
             # 扣除本次行为的电量
             uav.energy -= uav.cal_energy_loss(action)
             # 计算无人机新的坐标
-            new_x = int(uav.x + action[0])
-            new_y = int(uav.y + action[1])
+            new_x = uav.x + action[0]
+            new_y = uav.y + action[1]
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = -(abs(action[0]) + abs(action[1]))
+                reward = -0.01
                 # 判断是否采集了某个兴趣点
                 raidus = 15
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= raidus**2 and poi.done == 0:
-                        reward = 100
+                        reward = 1
                         poi.done = 1
                         # 绘制poi
                         self.render.draw_poi(poi)
                         break
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
-                    if obstacle[0] == new_x and obstacle[1] == new_y:
-                        reward = -100
+                    if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
+                        reward = -1
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
-                # 判断是否撞到了无人机
-                raidus = 2
-                for uav in self.uavs:
-                    dis = (new_x - uav.x)**2 + (new_y - uav.y)**2
-                    if 1e-6 < dis <= raidus**2:
-                        reward = -100
-                        break
                 # 更新环境观测值
                 self.obsvervation_space.update_pois_obs(self.pois)
                 self.obsvervation_space.update_uavs_obs(self.uavs)
@@ -213,7 +207,7 @@ class UavEnvironment:
                 uav.obs = self.obsvervation_space.observations
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -999
+                reward = -1
                 # 更新该无人机的位置
                 if new_x < 0:
                     uav.x = 0
@@ -238,8 +232,9 @@ class UavEnvironment:
 
 
 if __name__ == "__main__":
-    pois = np.load("Data/pois.npy", allow_pickle=True)
-    obstacles = np.load("Data/obstacles.npy")
+    pois = np.load("data/pois.npy", allow_pickle=True)
+    # obstacles = np.load("data/obstacles.npy")
+    obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
     env.reset()
     while True:
@@ -248,7 +243,7 @@ if __name__ == "__main__":
         action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
         '''
         for uav in env.uavs:
-            actions.extend(2 * uav.v_max * np.random.random(2) - uav.v_max)
+            actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
         obs, rewards, dones, _ = env.step(actions)
         cv2.imshow("env", env.render.image)
         cv2.waitKey(0)

@@ -1,7 +1,7 @@
 # dir 不需要提交的目录
 /.idea
 /__pycache__
-​
+​/img/*.jpg
 # file 不需要提交的文件
 
 ​

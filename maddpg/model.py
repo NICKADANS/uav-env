@@ -34,5 +34,5 @@ class Actor(nn.Module):
     def forward(self, obs):
         result = F.relu(self.FC1(obs))
         result = F.relu(self.FC2(result))
-        result = F.tanh(self.FC3(result))
+        result = torch.tanh(self.FC3(result))
         return result
