@@ -33,6 +33,8 @@ if __name__ == "__main__":
     maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity, episodes_before_train)
 
     FloatTensor = torch.cuda.FloatTensor if maddpg.use_cuda else torch.FloatTensor
+
+    avg_reward = 0.0
     for i_episode in range(n_episode):  # n_episode):
         obs = env.reset()
         obs = np.stack(obs)
@@ -48,7 +50,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 10 == 0 and t % 10 == 0 and render:
+            if i_episode % 100 == 0 and t % 50 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)
@@ -78,6 +80,11 @@ if __name__ == "__main__":
 
 
         maddpg.episode_done += 1
+        if i_episode % 100 == 0:
+            avg_reward /= 100
+            print('Average reward: %f' % avg_reward)
+            avg_reward = 0.0
+        avg_reward += total_reward
         print('Episode: %d, reward = %f' % (i_episode, total_reward))
         reward_record.append(total_reward)
 

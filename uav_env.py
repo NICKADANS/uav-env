@@ -1,6 +1,8 @@
 # --------------------------------------------------------
 # 搭建UAV的强化学习环境
 # --------------------------------------------------------
+from copy import deepcopy
+
 import common
 import cv2
 import numpy as np
@@ -18,18 +20,21 @@ class UavEnvRender:
         # 调整BGR值，将图设为白色
         self.image[:, :] = (255, 255, 255)
         # 兴趣点，障碍物及无人机
-        self.init_pois = pois
-        self.init_uavs = uavs
-        self.pois = self.init_pois
-        self.uavs = self.init_uavs
+        self.pois = deepcopy(pois)
+        self.uavs = deepcopy(uavs)
+        self.init_pois = deepcopy(pois)
+        self.init_uavs = deepcopy(uavs)
+
         self.obstacles = obstacles
 
     # 重置图片
     def reset(self):
         self.image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         self.image[:, :] = (255, 255, 255)
-        self.draw_pois(self.init_pois)
-        self.draw_uavs(self.init_uavs)
+        self.pois = deepcopy(self.init_pois)
+        self.uavs = deepcopy(self.init_uavs)
+        self.draw_pois(self.pois)
+        self.draw_uavs(self.uavs)
         self.draw_obs(self.obstacles)
 
     # 绘制兴趣点
@@ -113,14 +118,14 @@ class ActionSpace:
 class UavEnvironment:
     def __init__(self, pois, obstacles, uav_num):
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
-        self.init_pois = pois
-        self.pois = self.init_pois
+        self.pois = deepcopy(pois)
         self.obstacles = obstacles
         self.uavs = [UAV() for i in range(uav_num)]
+        self.init_pois = deepcopy(pois)
         # 初始化观测空间和行为空间，保存初始观测值
         self.obsvervation_space = ObservationSpace(self.pois, self.obstacles, self.uavs)
         self.action_space = ActionSpace(self.uavs)
-        self.init_obs = self.obsvervation_space.observations
+        self.init_obs = deepcopy(self.obsvervation_space.observations)
         # 为每个无人机初始化观测值
         for uav in self.uavs:
             uav.obs = self.obsvervation_space.observations
@@ -133,8 +138,8 @@ class UavEnvironment:
     # 重置环境状态
     def reset(self):
         # 重置兴趣点和观测值
-        self.pois = self.init_pois
-        self.obsvervation_space.observations = self.init_obs
+        self.pois = deepcopy(self.init_pois)
+        self.obsvervation_space.observations = deepcopy(self.init_obs)
         # 重置每个无人机
         for uav in self.uavs:
             uav.reset()
@@ -236,23 +241,29 @@ if __name__ == "__main__":
     # obstacles = np.load("data/obstacles.npy")
     obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
-    env.reset()
-    while True:
-        actions = []
-        '''
-        action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
-        '''
-        for uav in env.uavs:
-            actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
-        obs, rewards, dones, _ = env.step(actions)
+    for i in range(0, 100):
+        env.reset()
+        while True:
+            actions = []
+            '''
+            action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
+            '''
+            for uav in env.uavs:
+                actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
+            obs, rewards, dones, _ = env.step(actions)
+            done = 1
+            for d in dones:
+                if d == 0:
+                    done = 0
+                    break
+            if done ==  1:
+                break
+        count = 0
+        for p in env.pois:
+            if p.done == 1:
+                count += 1
+        print(count)
         cv2.imshow("env", env.render.image)
         cv2.waitKey(0)
-        done = 1
-        for d in dones:
-            if d == 0:
-                done = 0
-                break
-        if done ==  1:
-            break
     # print(env._get_obs(uavs[0]))
     # obsn, rewn, donen, _ = env.step(actions)
