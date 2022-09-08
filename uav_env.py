@@ -146,24 +146,27 @@ class UavEnvironment:
     # 执行行为
     def step(self, actions):
         reward_n = []
-        done_n = 1
+        done_n = []
         info_n = {'n': []}
         i = 0
         # 为每个无人机执行行为
         for uav in self.uavs:
-            reward = self._step(uav, actions[i: i+2])
+            _, _, reward, _ = self._step(uav, actions[i])
             reward_n.append(reward)
-            i += 2
-        # 倘若共享奖励值
-        reward = np.sum(reward_n)
-        if self.share_reward:
-            reward_n = [reward for i in range(len(self.uavs))]
+            i += 1
         # 计算是否完成
         for uav in self.uavs:
             if uav.energy != 0:
-                done_n = 0
-                break
-        return self.obsvervation_space.observations, reward_n, done_n, info_n
+                done_n.append(0)
+            else:
+                done_n.append(1)
+        # 倘若共享奖励值
+        reward = np.sum(reward_n)
+        if self.share_reward:
+            reward_n = [reward for _ in range(len(self.uavs))]
+        # 环境状态值
+        new_state_n = [self.obsvervation_space.observations for _ in range(len(self.uavs))]
+        return new_state_n, reward_n, done_n, info_n
 
     # 为环境里的单个无人机执行行为
     def _step(self, uav, action):
@@ -196,6 +199,13 @@ class UavEnvironment:
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
+                # 判断是否撞到了无人机
+                raidus = 2
+                for uav in self.uavs:
+                    dis = (new_x - uav.x)**2 + (new_y - uav.y)**2
+                    if 1e-6 < dis <= raidus**2:
+                        reward = -100
+                        break
                 # 更新环境观测值
                 self.obsvervation_space.update_pois_obs(self.pois)
                 self.obsvervation_space.update_uavs_obs(self.uavs)
@@ -224,7 +234,7 @@ class UavEnvironment:
         uav.v_y = 0
         # 渲染无人机的新位置
         self.render.draw_uav(uav)
-        return reward
+        return uav.obs, action, reward, None
 
 
 if __name__ == "__main__":
@@ -239,10 +249,15 @@ if __name__ == "__main__":
         '''
         for uav in env.uavs:
             actions.extend(2 * uav.v_max * np.random.random(2) - uav.v_max)
-        obs, reward, done, _ = env.step(actions)
+        obs, rewards, dones, _ = env.step(actions)
         cv2.imshow("env", env.render.image)
         cv2.waitKey(0)
-        if done == 1:
+        done = 1
+        for d in dones:
+            if d == 0:
+                done = 0
+                break
+        if done ==  1:
             break
     # print(env._get_obs(uavs[0]))
     # obsn, rewn, donen, _ = env.step(actions)

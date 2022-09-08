@@ -19,22 +19,22 @@ def hard_update(target, source):
 
 # MADDPG算法
 class MADDPG:
-    def __init__(self, n_agents, dim_obs, dim_act, batch_size,
-                 capacity, episodes_before_train):
-
-        # 初始化 2*n_agents 个网络
-        self.actors = [Actor(dim_obs, dim_act) for i in range(n_agents)]
-        self.critics = [Critic(dim_obs, dim_act) for i in range(n_agents)]
+    def __init__(self, n_agents, dim_obs, dim_act, batch_size, capacity, episodes_before_train):
+        # 初始化 2 * n_agents 个网络
+        self.critics = [Critic(n_agents, dim_obs, dim_act) for _ in range(n_agents)]
+        self.actors = [Actor(dim_obs, dim_act) for _ in range(n_agents)]
         self.actors_target = deepcopy(self.actors)
         self.critics_target = deepcopy(self.critics)
 
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
         self.n_agents = n_agents
         self.n_states = dim_obs
         self.n_actions = dim_act
         self.memory = ReplayBuffer(capacity)
         self.batch_size = batch_size
         self.use_cuda = torch.cuda.is_available()
-        if self.use_cuda: # 如果可以使用GPU加速计算
+        if self.use_cuda:  # 如果可以使用GPU加速计算
             for x in self.actors:
                 x.cuda()
             for x in self.critics:
@@ -68,49 +68,39 @@ class MADDPG:
         c_loss = []
         a_loss = []
         for agent in range(self.n_agents):
-            transitions = self.memory.sample(self.batch_size)
-            batch = Experience(*zip(*transitions))
-            non_final_mask = ByteTensor(list(map(lambda s: s is not None,
-                                                 batch.next_states)))
-            # state_batch: batch_size x n_agents x dim_obs
-            state_batch = th.stack(batch.states).type(FloatTensor)
-            action_batch = th.stack(batch.actions).type(FloatTensor)
-            reward_batch = th.stack(batch.rewards).type(FloatTensor)
-            # : (batch_size_non_final) x n_agents x dim_obs
-            non_final_next_states = th.stack(
-                [s for s in batch.next_states
-                 if s is not None]).type(FloatTensor)
+            states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+
+            state_batch = torch.stack(states).type(FloatTensor)
+            action_batch = torch.stack(actions).type(FloatTensor)
+            reward_batch = torch.stack(rewards).type(FloatTensor)
+            non_final_next_states = torch.stack([s for s in next_states if s is not None]).type(FloatTensor)
+
+            # 这句话啥意思
+            non_final_mask = ByteTensor(list(map(lambda s: s is not None, next_states)))
 
             # for current agent
             whole_state = state_batch.view(self.batch_size, -1)
             whole_action = action_batch.view(self.batch_size, -1)
+
             self.critic_optimizer[agent].zero_grad()
+
             current_Q = self.critics[agent](whole_state, whole_action)
 
-            non_final_next_actions = [
-                self.actors_target[i](non_final_next_states[:,
-                                                            i,
-                                                            :]) for i in range(
-                                                                self.n_agents)]
-            non_final_next_actions = th.stack(non_final_next_actions)
-            non_final_next_actions = (
-                non_final_next_actions.transpose(0,
-                                                 1).contiguous())
+            non_final_next_actions = [self.actors_target[i](non_final_next_states[:, i, :]) for i in range(self.n_agents)]
+            non_final_next_actions = torch.stack(non_final_next_actions)
+            non_final_next_actions = (non_final_next_actions.transpose(0, 1).contiguous())
 
-            target_Q = t.zeros(self.batch_size).type(FloatTensor)
+            target_Q = torch.zeros(self.batch_size).type(FloatTensor)
 
             target_Q[non_final_mask] = self.critics_target[agent](
-                non_final_next_states.view(-1, self.n_agents * self.n_states),
-                non_final_next_actions.view(-1,
-                                            self.n_agents * self.n_actions)
+                non_final_next_states.view(-1, self.n_agents * self.n_states), non_final_next_actions.view(-1, self.n_agents * self.n_actions)
             ).squeeze()
+
             # scale_reward: to scale reward in Q functions
-
-            target_Q = (target_Q.unsqueeze(1) * self.GAMMA) + (
-                reward_batch[:, agent].unsqueeze(1) * scale_reward)
-
+            target_Q = (target_Q.unsqueeze(1) * self.GAMMA) + (reward_batch[:, agent].unsqueeze(1) * self.scale_reward)
             loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
             loss_Q.backward()
+
             self.critic_optimizer[agent].step()
 
             self.actor_optimizer[agent].zero_grad()
@@ -130,26 +120,21 @@ class MADDPG:
             for i in range(self.n_agents):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
-
         return c_loss, a_loss
 
-
+    # 挑选行为
     def select_action(self, state_batch):
-        # state_batch: n_agents x state_dim
         actions = torch.zeros(self.n_agents, self.n_actions)
         FloatTensor = torch.cuda.FloatTensor if self.use_cuda else torch.FloatTensor
         for i in range(self.n_agents):
             sb = state_batch[i, :].detach()
             act = self.actors[i](sb.unsqueeze(0)).squeeze()
-
-            act += torch.from_numpy(
-                np.random.randn(2) * self.var[i]).type(FloatTensor)
-
+            # 生成两个噪音
+            act += torch.from_numpy(np.random.randn(self.dim_act) * self.var[i]).type(FloatTensor)
             if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
                 self.var[i] *= 0.999998
-
-            act = torch.clamp(act, -1.0, 1.0)
-
+            # 将act的区间夹紧在 [-vmax, vmax]之间
+            act = torch.clamp(act, -20, 20)
             actions[i, :] = act
         self.steps_done += 1
-        return
+        return actions
