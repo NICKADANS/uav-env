@@ -78,7 +78,6 @@ if __name__ == "__main__":
                     break
             t += 1
 
-
         maddpg.episode_done += 1
         if i_episode % 100 == 0:
             avg_reward /= 100
@@ -90,5 +89,4 @@ if __name__ == "__main__":
 
         if maddpg.episode_done == maddpg.episodes_before_train:
             print('training now begins...')
-            print('MADDPG on WaterWorld\n' + 'scale_reward=%f\n' % maddpg.scale_reward + 'agent=%d' % n_agents +
-                  ', coop=%d' % n_coop + ' \nlr=0.001, 0.0001, sensor_range=0.3\n')
+            print('MADDPG scale_reward=%f\n' % maddpg.scale_reward + 'agent=%d' % n_agents + '\nlr=0.001\n')
