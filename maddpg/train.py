@@ -13,9 +13,6 @@ if __name__ == "__main__":
     obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
 
-    n_coop = 2
-
-    reward_record = []
     # 配置网络和缓冲区的初始化参数
     n_agents = 3
     n_states = env.obsvervation_space.dim
@@ -24,7 +21,7 @@ if __name__ == "__main__":
     batch_size = 16
     # 循环次数
     n_episode = 20000
-    max_steps = 1000
+    # max_steps = 1000
     episodes_before_train = 100
 
     win = None
@@ -50,7 +47,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 100 == 0 and t % 50 == 0 and render:
+            if i_episode % 100 == 0 and t % 20 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)
@@ -60,32 +57,31 @@ if __name__ == "__main__":
             obs_ = np.stack(obs_)
             obs_ = obs_.astype(float)
             obs_ = torch.from_numpy(obs_).float()
-            if t != max_steps - 1:
-                next_obs = obs_
-            else:
-                next_obs = None
-            total_reward += reward.sum()
-            rr += reward.cpu().numpy()
-            if next_obs != None:
-                maddpg.memory.add(obs.data, action, reward, next_obs.data, done)
-            obs = next_obs
-            c_loss, a_loss = maddpg.update_policy()
             # 判断一个episode是否结束
             isdone = True
             for d in done:
                 if d == 0:
                     isdone = False
                     break
+            if isdone is False:
+                next_obs = obs_
+            else:
+                next_obs = None
+            total_reward += reward.sum()
+            rr += reward.cpu().numpy()
+            if next_obs is not None:
+                maddpg.memory.add(obs.data, action, reward, next_obs.data, done)
+            obs = next_obs
+            c_loss, a_loss = maddpg.update_policy()
             t += 1
 
         maddpg.episode_done += 1
         if i_episode % 100 == 0:
             avg_reward /= 100
+            print('Episode: %d, reward = %f' % (i_episode, total_reward))
             print('Average reward: %f' % avg_reward)
             avg_reward = 0.0
         avg_reward += total_reward
-        print('Episode: %d, reward = %f' % (i_episode, total_reward))
-        reward_record.append(total_reward)
 
         if maddpg.episode_done == maddpg.episodes_before_train:
             print('training now begins...')
