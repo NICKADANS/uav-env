@@ -6,7 +6,9 @@ import cv2
 
 if __name__ == "__main__":
     # 是否渲染
-    render = False
+    render = True
+    # 是否载入模型
+    load = False
     # 载入环境
     pois = np.load("../data/pois.npy", allow_pickle=True)
     # obstacles = np.load("../data/obstacles.npy")
@@ -18,9 +20,9 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 10000
-    batch_size = 16
+    batch_size = 32
     # 循环次数
-    n_episode = 20000
+    n_episode = 10000
     # max_steps = 1000
     episodes_before_train = 100
 
@@ -31,8 +33,12 @@ if __name__ == "__main__":
 
     FloatTensor = torch.cuda.FloatTensor if maddpg.use_cuda else torch.FloatTensor
 
+    if load:
+        maddpg.load_model('')
+
     avg_reward = 0.0
-    for i_episode in range(n_episode):  # n_episode):
+
+    for i_episode in range(n_episode):
         obs = env.reset()
         obs = np.stack(obs)
         obs = obs.astype(float)
@@ -47,7 +53,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 100 == 0 and t % 20 == 0 and render:
+            if i_episode % 100 == 0 and t % 10 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)

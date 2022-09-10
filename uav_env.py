@@ -56,7 +56,7 @@ class UavEnvRender:
 
     # 更新无人机状态
     def draw_uav(self, uav):
-        cv2.circle(self.image, (int(uav.x), int(uav.y)), 2, uav.color, -1)
+        cv2.circle(self.image, (int(uav.x), int(uav.y)), 3, uav.color, -1)
 
     # 绘制障碍物
     def draw_obs(self, obstacles):
@@ -187,7 +187,7 @@ class UavEnvironment:
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = -0.1
+                reward = -0.01
                 # 判断是否采集了某个兴趣点
                 raidus = 15
                 for poi in self.pois:

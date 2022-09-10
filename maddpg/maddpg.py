@@ -12,10 +12,12 @@ def soft_update(target, source, t):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_((1 - t) * target_param.data + t * source_param.data)
 
+
 # 硬更新(同步)target网络参数
 def hard_update(target, source):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(source_param.data)
+
 
 # MADDPG算法
 class MADDPG:
@@ -146,3 +148,14 @@ class MADDPG:
         for i in range(len(self.critics)):
             torch.save(self.critics[i].state_dict(), 'critic' + str(i) + ".pth")
             torch.save(self.actors[i].state_dict(), 'actor' + str(i) + ".pth")
+
+    # 加载模型
+    def load_model(self, path):
+        if torch.cuda.is_available():
+            for i in range(len(self.critics)):
+                self.critics[i].load_state_dict(torch.load(path + 'critic' + str(i) + '.pth'))
+                self.actors[i].load_state_dict(torch.load(path + 'actor' + str(i) + '.pth'))
+        else:
+            for i in range(len(self.critics)):
+                self.critics[i].load_state_dict(torch.load(path + 'critic' + str(i) + '.pth', map_location=torch.device('cpu')))
+                self.actors[i].load_state_dict(torch.load(path + 'actor' + str(i) + '.pth', map_location=torch.device('cpu')))
