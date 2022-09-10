@@ -19,7 +19,7 @@ if __name__ == "__main__":
     n_agents = 3
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
-    capacity = 10000
+    capacity = 100000
     batch_size = 32
     # 循环次数
     n_episode = 10000
@@ -53,7 +53,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 100 == 0 and t % 10 == 0 and render:
+            if i_episode % 100 == 0 and t % 50 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)
