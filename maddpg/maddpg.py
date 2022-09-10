@@ -143,6 +143,6 @@ class MADDPG:
 
     # 保存模型
     def save_model(self):
-        for i in range(self.critics):
+        for i in range(len(self.critics)):
             torch.save(self.critics[i].state_dict(), 'critic' + str(i) + ".pth")
             torch.save(self.actors[i].state_dict(), 'actor' + str(i) + ".pth")

@@ -6,7 +6,7 @@ import cv2
 
 if __name__ == "__main__":
     # 是否渲染
-    render = True
+    render = False
     # 载入环境
     pois = np.load("../data/pois.npy", allow_pickle=True)
     # obstacles = np.load("../data/obstacles.npy")
@@ -86,3 +86,5 @@ if __name__ == "__main__":
         if maddpg.episode_done == maddpg.episodes_before_train:
             print('training now begins...')
             print('MADDPG scale_reward=%f\n' % maddpg.scale_reward + 'agent=%d' % n_agents + '\nlr=0.001\n')
+
+    maddpg.save_model()
