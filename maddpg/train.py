@@ -1,3 +1,5 @@
+import sys
+sys.path.append('..')
 from uav_env import UavEnvironment
 from maddpg import MADDPG
 import numpy as np
@@ -20,7 +22,7 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 1024
+    batch_size = 128
     # 循环次数
     n_episode = 10000
     # max_steps = 1000
@@ -45,7 +47,6 @@ if __name__ == "__main__":
         if isinstance(obs, np.ndarray):
             obs = torch.from_numpy(obs).float()
         total_reward = 0.0
-        rr = np.zeros((n_agents,))
 
         isdone = False
         t = 0
@@ -53,7 +54,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 100 == 0 and t % 20 == 0 and render:
+            if i_episode % 100 == 0 and t % 10 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)
@@ -74,7 +75,6 @@ if __name__ == "__main__":
             else:
                 next_obs = None
             total_reward += reward.sum()
-            rr += reward.cpu().numpy()
             if next_obs is not None:
                 maddpg.memory.add(obs.data, action, reward, next_obs.data, done)
             obs = next_obs
@@ -82,8 +82,8 @@ if __name__ == "__main__":
             t += 1
 
         maddpg.episode_done += 1
-        if i_episode % 100 == 0:
-            avg_reward /= 100
+        if i_episode % 50 == 0:
+            avg_reward /= 50
             print('Episode: %d, reward = %f' % (i_episode, total_reward))
             print('Average reward: %f' % avg_reward)
             avg_reward = 0.0

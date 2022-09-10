@@ -153,9 +153,9 @@ class MADDPG:
     def load_model(self, path):
         if torch.cuda.is_available():
             for i in range(len(self.critics)):
-                self.critics[i].load_state_dict(torch.load(path + 'critic' + str(i) + '.pth'))
-                self.actors[i].load_state_dict(torch.load(path + 'actor' + str(i) + '.pth'))
+                self.critics[i].load_state_dict(torch.load('critic' + str(i) + '.pth'))
+                self.actors[i].load_state_dict(torch.load('actor' + str(i) + '.pth'))
         else:
             for i in range(len(self.critics)):
-                self.critics[i].load_state_dict(torch.load(path + 'critic' + str(i) + '.pth', map_location=torch.device('cpu')))
-                self.actors[i].load_state_dict(torch.load(path + 'actor' + str(i) + '.pth', map_location=torch.device('cpu')))
+                self.critics[i].load_state_dict(torch.load('critic' + str(i) + '.pth', map_location=torch.device('cpu')))
+                self.actors[i].load_state_dict(torch.load('actor' + str(i) + '.pth', map_location=torch.device('cpu')))
