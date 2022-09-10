@@ -124,6 +124,7 @@ class MADDPG:
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
 
+        print(c_loss, a_loss)
         return c_loss, a_loss
 
     # 挑选行为
@@ -135,8 +136,8 @@ class MADDPG:
             act = self.actors[i](sb.unsqueeze(0)).squeeze()
             # 生成两个噪音
             act += torch.from_numpy(20 * np.random.randn(self.dim_act) * self.var[i]).type(FloatTensor)
-            if self.episode_done > self.episodes_before_train and self.var[i] > 0.01:
-                self.var[i] *= 0.998
+            if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
+                self.var[i] *= 0.999998
             # 将act的区间夹紧在 [-vmax, vmax]之间
             act = torch.clamp(act, -20, 20)
             actions[i, :] = act
