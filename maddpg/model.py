@@ -14,8 +14,8 @@ class Critic(nn.Module):
 
         self.FC1 = nn.Linear(obs_dim, 1024)
         self.FC2 = nn.Linear(1024+act_dim, 512)
-        self.FC3 = nn.Linear(512, 300)
-        self.FC4 = nn.Linear(300, 1)
+        self.FC3 = nn.Linear(512, 256)
+        self.FC4 = nn.Linear(256, 1)
 
     def forward(self, obs, acts):
         result = F.relu(self.FC1(obs))

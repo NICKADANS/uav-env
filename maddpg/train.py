@@ -6,7 +6,7 @@ import cv2
 
 if __name__ == "__main__":
     # 是否渲染
-    render = True
+    render = False
     # 是否载入模型
     load = False
     # 载入环境
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 32
+    batch_size = 1024
     # 循环次数
     n_episode = 10000
     # max_steps = 1000
@@ -53,7 +53,7 @@ if __name__ == "__main__":
             obs = obs.type(FloatTensor)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
-            if i_episode % 100 == 0 and t % 50 == 0 and render:
+            if i_episode % 100 == 0 and t % 20 == 0 and render:
                 # cv2.imshow("env", env.render.image)
                 filepath = '../img/' + str(i_episode/100) + '-' + str(t) + '.jpg'
                 print(filepath)
@@ -87,10 +87,10 @@ if __name__ == "__main__":
             print('Episode: %d, reward = %f' % (i_episode, total_reward))
             print('Average reward: %f' % avg_reward)
             avg_reward = 0.0
+            maddpg.save_model()
         avg_reward += total_reward
 
         if maddpg.episode_done == maddpg.episodes_before_train:
             print('training now begins...')
             print('MADDPG scale_reward=%f\n' % maddpg.scale_reward + 'agent=%d' % n_agents + '\nlr=0.001\n')
 
-    maddpg.save_model()
