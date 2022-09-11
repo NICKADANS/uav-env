@@ -32,7 +32,7 @@ class UAV:
 
     # 计算执行某个行为的能量损耗(绝对值)
     def cal_energy_loss(self, action):
-        return 0.01
+        return 0.005
 
     # 更新速度，并将其修正到合适的区间
     def set_velocity(self, v_x, v_y):

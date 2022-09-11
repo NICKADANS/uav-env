@@ -52,6 +52,7 @@ if __name__ == "__main__":
         t = 0
         while not isdone:
             obs = obs.type(FloatTensor)
+            print(obs)
             action = maddpg.select_action(obs).data.cpu()
             # render every 100 episodes to speed up training
             if i_episode % 100 == 0 and t % 10 == 0 and render:
@@ -82,8 +83,8 @@ if __name__ == "__main__":
             t += 1
 
         maddpg.episode_done += 1
-        if i_episode % 50 == 0:
-            avg_reward /= 50
+        if i_episode % 20 == 0:
+            avg_reward /= 20
             print('Episode: %d, reward = %f' % (i_episode, total_reward))
             print('Average reward: %f' % avg_reward)
             avg_reward = 0.0

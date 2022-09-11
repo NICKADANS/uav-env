@@ -128,16 +128,16 @@ class MADDPG:
         return c_loss, a_loss
 
     # 挑选行为
-    def select_action(self, state_batch):
+    def select_action(self, states):
         actions = torch.zeros(self.n_agents, self.n_actions)
         FloatTensor = torch.cuda.FloatTensor if self.use_cuda else torch.FloatTensor
         for i in range(self.n_agents):
-            sb = state_batch[i, :].detach()
+            sb = states[i, :].detach()
             act = self.actors[i](sb.unsqueeze(0)).squeeze()
             # 生成两个噪音
-            act += torch.from_numpy(20 * np.random.randn(self.dim_act) * self.var[i]).type(FloatTensor)
+            act += torch.from_numpy(10 * np.random.randn(self.dim_act) * self.var[i]).type(FloatTensor)
             if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
-                self.var[i] *= 0.999998
+                self.var[i] *= 0.9998
             # 将act的区间夹紧在 [-vmax, vmax]之间
             act = torch.clamp(act, -20, 20)
             actions[i, :] = act

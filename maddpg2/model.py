@@ -1,4 +1,4 @@
-import torch
+import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -17,9 +17,10 @@ class Critic(nn.Module):
         self.FC3 = nn.Linear(512, 256)
         self.FC4 = nn.Linear(256, 1)
 
+    # obs: batch_size * obs_dim
     def forward(self, obs, acts):
         result = F.relu(self.FC1(obs))
-        combined = torch.cat([result, acts], 1)
+        combined = th.cat([result, acts], 1)
         result = F.relu(self.FC2(combined))
         return self.FC4(F.relu(self.FC3(result)))
 
@@ -31,8 +32,9 @@ class Actor(nn.Module):
         self.FC2 = nn.Linear(512, 128)
         self.FC3 = nn.Linear(128, dim_action)
 
+    # action output between -2 and 2
     def forward(self, obs):
         result = F.relu(self.FC1(obs))
         result = F.relu(self.FC2(result))
-        result = torch.tanh(self.FC3(result))
+        result = F.tanh(self.FC3(result))
         return result
