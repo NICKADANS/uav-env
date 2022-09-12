@@ -145,7 +145,8 @@ class UavEnvironment:
             uav.reset()
             uav.obs = self.obsvervation_space.observations
         # 重置渲染
-        self.render.reset()
+        if self.is_render:
+            self.render.reset()
         new_state_n = [self.obsvervation_space.observations for _ in range(len(self.uavs))]
         return new_state_n
 
@@ -195,7 +196,8 @@ class UavEnvironment:
                         reward = 1
                         poi.done = 1
                         # 绘制poi
-                        self.render.draw_poi(poi)
+                        if self.is_render:
+                            self.render.draw_poi(poi)
                         break
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
@@ -232,7 +234,8 @@ class UavEnvironment:
         uav.v_x = 0
         uav.v_y = 0
         # 渲染无人机的新位置
-        self.render.draw_uav(uav)
+        if self.is_render:
+            self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
 
