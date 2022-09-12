@@ -147,7 +147,7 @@ class UavEnvironment:
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = -0.001
+                reward = 0
                 # 判断是否采集了某个兴趣点
                 raidus = 15
                 for poi in self.pois:

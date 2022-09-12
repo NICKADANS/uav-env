@@ -16,7 +16,8 @@ if __name__ == "__main__":
     # obstacles = np.load("../data/obstacles.npy")
     obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
-
+    env.is_render = True
+    env.share_reward = True
     # 配置参数
     np.random.seed(int(time.time()))
 
@@ -24,9 +25,9 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 128
+    batch_size = 256
 
-    n_episode = 10000
+    n_episode = 5000
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
     episodes_before_train = 100
