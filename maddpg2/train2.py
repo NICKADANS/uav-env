@@ -25,7 +25,7 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 128
+    batch_size = 16
 
     n_episode = 5000
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             obs_ = th.FloatTensor(obs_).type(FloatTensor)
             reward = th.FloatTensor(reward).type(FloatTensor)
             maddpg.memory.push(obs.data, action, obs_.data, reward)
-            total_reward += reward.sum()
+            total_reward += reward[0]
             obs = obs_
             maddpg.update_policy()
 

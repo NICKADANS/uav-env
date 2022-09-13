@@ -149,9 +149,9 @@ class UavEnvironment:
                 # 计算奖励
                 reward = -0.1
                 # 判断是否采集了某个兴趣点
-                raidus = 15
+                radius = 15
                 for poi in self.pois:
-                    if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= raidus**2 and poi.done == 0:
+                    if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
                         reward = 100
                         poi.done = 1
                         # 绘制poi
@@ -161,11 +161,12 @@ class UavEnvironment:
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
-                        reward = -1
+                        reward = -10
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
+
             else:  # 无人机位于界外
                 # 计算奖励
                 reward = -1
@@ -220,12 +221,7 @@ if __name__ == "__main__":
             for uav in env.uavs:
                 actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
             obs, rewards, dones, _ = env.step(actions)
-            done = 1
-            for d in dones:
-                if d == 0:
-                    done = 0
-                    break
-            if done == 1:
+            if env.uavs[0].energy == 0:
                 break
         count = 0
         for p in env.pois:
