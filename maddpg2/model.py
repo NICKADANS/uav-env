@@ -10,7 +10,7 @@ class Critic(nn.Module):
         self.dim_observation = dim_observation
         self.dim_action = dim_action
         obs_dim = dim_observation * n_agent
-        act_dim = self.dim_action * n_agent
+        act_dim = dim_action * n_agent
         self.obs_net = nn.Sequential(
             nn.Linear(obs_dim, 1024),
             nn.ReLU(),
