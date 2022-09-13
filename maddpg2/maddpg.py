@@ -125,10 +125,10 @@ class MADDPG:
         for i in range(self.n_agents):
             sb = state_batch[i, :].detach()
             act = self.actors[i](sb.unsqueeze(0)).squeeze()
-            act += th.from_numpy((2 * np.random.random(self.n_actions) - 1) * self.var[i]).type(FloatTensor)
+            act += th.from_numpy((20 * np.random.random(self.n_actions) - 10) * self.var[i]).type(FloatTensor)
             if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
                 self.var[i] *= 0.999998
-            act = th.clamp(act, -2, 2)
+            act = th.clamp(act, -20, 20)
             actions[i, :] = act
         self.steps_done += 1
         return actions

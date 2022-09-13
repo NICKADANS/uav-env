@@ -11,30 +11,37 @@ class Critic(nn.Module):
         self.dim_action = dim_action
         obs_dim = dim_observation * n_agent
         act_dim = self.dim_action * n_agent
-
-        self.FC1 = nn.Linear(obs_dim, 1024)
-        self.FC2 = nn.Linear(1024+act_dim, 512)
-        self.FC3 = nn.Linear(512, 256)
-        self.FC4 = nn.Linear(256, 1)
+        self.obs_net = nn.Sequential(
+            nn.Linear(obs_dim, 1024),
+            nn.ReLU(),
+        )
+        self.out_net = nn.Sequential(
+            nn.Linear(1024 + act_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+        )
 
     # obs: batch_size * obs_dim
     def forward(self, obs, acts):
-        result = F.relu(self.FC1(obs))
-        combined = th.cat([result, acts], 1)
-        result = F.relu(self.FC2(combined))
-        return self.FC4(F.relu(self.FC3(result)))
+        x = self.obs_net(obs)
+        combined = th.cat([x, acts], dim=1)
+        return self.out_net(combined)
 
 
 class Actor(nn.Module):
     def __init__(self, dim_observation, dim_action):
         super(Actor, self).__init__()
-        self.FC1 = nn.Linear(dim_observation, 512)
-        self.FC2 = nn.Linear(512, 128)
-        self.FC3 = nn.Linear(128, dim_action)
+        self.net = nn.Sequential(
+            nn.Linear(dim_observation, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, dim_action),
+            nn.Tanh()
+        )
 
     # action output between -2 and 2
     def forward(self, obs):
-        result = F.relu(self.FC1(obs))
-        result = F.relu(self.FC2(result))
-        result = F.tanh(self.FC3(result))
-        return result
+        return self.net(obs)

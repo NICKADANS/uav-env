@@ -68,7 +68,7 @@ class UavEnvRender:
 class ObservationSpace:
     def __init__(self, pois, obstacles, uavs):
         # 状态空间维度
-        self.dim = len(pois) * 3 + len(obstacles) * 2 + len(uavs) * 3  # poi的信息，障碍物的信息，无人机的信息
+        self.dim = len(pois) * 1 + len(obstacles) * 2 + len(uavs) * 1  # poi的信息，障碍物的信息，无人机的信息
 
 
 # 对于每个Agent的行为空间
@@ -147,12 +147,12 @@ class UavEnvironment:
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = 0
+                reward = -1
                 # 判断是否采集了某个兴趣点
                 raidus = 15
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= raidus**2 and poi.done == 0:
-                        reward = 1
+                        reward = 100
                         poi.done = 1
                         # 绘制poi
                         if self.is_render:
@@ -192,10 +192,8 @@ class UavEnvironment:
             # 更新PoI的观测值
             i = 0
             for p in self.pois:
-                uav.obs[i] = uav.x - p.x
-                uav.obs[i+1] = uav.y - p.y
-                uav.obs[i+2] = p.done
-                i += 3
+                uav.obs[i] = np.sqrt((uav.x - p.x)**2 + (uav.y - p.y)**2)
+                i += 1
             # 更新障碍物的观测值
             for obs in self.obstacles:
                 uav.obs[i] = uav.x - obs[0]
@@ -203,10 +201,8 @@ class UavEnvironment:
                 i += 2
             # 更新无人机的观测值
             for u in self.uavs:
-                uav.obs[i] = uav.x - u.x
-                uav.obs[i+1] = uav.y - u.y
-                uav.obs[i+2] = uav.energy - u.energy
-                i += 3
+                uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
+                i += 1
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
