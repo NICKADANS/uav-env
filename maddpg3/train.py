@@ -1,10 +1,10 @@
-from maddpg2 import MADDPG
+from maddpg import MADDPG
+from memory import ReplayBuffer
 import sys
-
 sys.path.append('..')
 from uav_env2 import UavEnvironment
 import numpy as np
-import torch as th
+import torch as T
 import cv2
 import time
 
@@ -24,42 +24,36 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 16
-    n_episode = 5000
-    episodes_before_train = 10
+    batch_size = 256
+    n_episode = 10000
+    episodes_before_train = 100
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
-
-    maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity, episodes_before_train)
-    FloatTensor = th.cuda.FloatTensor if maddpg.use_cuda else th.FloatTensor
+    maddpg = MADDPG(n_states, n_actions, n_agents, batch_size, episodes_before_train)
+    memory = ReplayBuffer(capacity)
     avg_reward = 0.0
     for i_episode in range(n_episode):
         obs = env.reset()
         obs = np.stack(obs).astype(float)
-        obs = th.FloatTensor(obs).type(FloatTensor)
         total_reward = 0.0
         for t in range(int(max_steps)):
-            action = maddpg.select_action(obs).data.cpu()
+            action = maddpg.choose_action(obs)
             # render every 100 episodes to speed up training
             if i_episode % 100 == 0 and t % 20 == 0 and env.is_render:
                 filepath = '../img/' + str(i_episode / 100) + '-' + str(t) + '.jpg'
                 print(filepath)
                 cv2.imwrite(filepath, env.render.image)
-            obs_, reward, done, _ = env.step(action.numpy())
+
+            obs_, reward, done, _ = env.step(action)
             obs_ = np.stack(obs_).astype(float)
-            obs_ = th.FloatTensor(obs_).type(FloatTensor)
-            reward = th.FloatTensor(reward).type(FloatTensor)
-            maddpg.memory.push(obs.data, action, obs_.data, reward)
+            memory.add(obs, action, reward, obs_, done)
             total_reward += reward[0]
             obs = obs_
-            maddpg.update_policy()
+            maddpg.learn(memory)
 
         maddpg.episode_done += 1
         avg_reward += total_reward
         print('Episode: %d, reward = %f avg_reward = %f' % (i_episode, total_reward, avg_reward/(i_episode + 1)))
-        if i_episode % 50 == 0:
-            maddpg.save_model()
-            print('epsilon: ', maddpg.epsilon)
 
-        if maddpg.episode_done == maddpg.episodes_before_train:
+        if maddpg.episode_done == maddpg.episode_before_train:
             print('training now begins...')

@@ -1,6 +1,4 @@
 # 经验缓冲区
-
-import numpy as np
 import random
 
 
@@ -47,19 +45,6 @@ class ReplayBuffer(object):
             dones.append(done)
         return obses_t, actions, rewards, obses_tp1, dones
 
-    # 根据数量batch_size生成一批随机索引
-    def make_index(self, batch_size):
-        return [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
-
-    # 使用最近数量为batch_size的经验
-    def make_latest_index(self, batch_size):
-        idx = [(self._next_idx - 1 - i) % self._maxsize for i in range(batch_size)]
-        np.random.shuffle(idx)
-        return idx
-
-    def sample_index(self, idxes):
-        return self._encode_sample(idxes)
-
     # 从缓冲区中随机取样batch_size个历史经验
     def sample(self, batch_size):
         """
@@ -81,7 +66,7 @@ class ReplayBuffer(object):
                 the end of an episode and 0 otherwise.
         """
         if batch_size > 0:  # 采集batch_size个样本
-            idxes = self.make_index(batch_size)
+            idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
         else:  # 采集缓冲区内所有样本
             idxes = range(0, len(self._storage))
         return self._encode_sample(idxes)

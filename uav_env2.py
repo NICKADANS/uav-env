@@ -161,7 +161,7 @@ class UavEnvironment:
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
-                        reward = -10
+                        reward = -1
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
@@ -186,6 +186,7 @@ class UavEnvironment:
             self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
+    # 计算环境归一化后的观测值
     def cal_env_obs(self):
         for uav in self.uavs:
             if len(uav.obs) == 0:
@@ -204,6 +205,7 @@ class UavEnvironment:
             for u in self.uavs:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
                 i += 1
+            uav.obs = [0.001*x for x in uav.obs]
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":

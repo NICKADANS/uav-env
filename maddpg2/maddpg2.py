@@ -59,17 +59,15 @@ class MADDPG:
     def update_policy(self):
         if self.episode_done <= self.episodes_before_train:
             return
-
         FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
-        # 提取经验
-        transitions = self.memory.sample(self.batch_size)
-        batch = Experience(*zip(*transitions))
-        states_batch = th.stack(batch.states).type(FloatTensor)
-        actions_batch = th.stack(batch.actions).type(FloatTensor)
-        rewards_batch = th.stack(batch.rewards).type(FloatTensor)
-        next_state_batch = th.stack(batch.next_states).type(FloatTensor)
-
         for i in range(self.n_agents):
+            # 提取经验
+            transitions = self.memory.sample(self.batch_size)
+            batch = Experience(*zip(*transitions))
+            states_batch = th.stack(batch.states).type(FloatTensor)
+            actions_batch = th.stack(batch.actions).type(FloatTensor)
+            rewards_batch = th.stack(batch.rewards).type(FloatTensor)
+            next_state_batch = th.stack(batch.next_states).type(FloatTensor)
             with torch.no_grad():
                 next_actions = th.stack([self.actors_target[agent](next_state_batch[:, agent, :]) for agent in range(self.n_agents)])
                 next_actions = next_actions.transpose(0, 1).contiguous()
@@ -101,10 +99,9 @@ class MADDPG:
             actor_loss.backward()
             self.actor_optimizer[i].step()
 
-            # 更新神经网络
-            if self.steps_done % 100 == 0:
-                soft_update(self.critics_target[i], self.critics[i], self.tau)
-                soft_update(self.actors_target[i], self.actors[i], self.tau)
+            # 软更新神经网络
+            soft_update(self.critics_target[i], self.critics[i], self.tau)
+            soft_update(self.actors_target[i], self.actors[i], self.tau)
 
     def select_action(self, states, exploration=True):
         FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
