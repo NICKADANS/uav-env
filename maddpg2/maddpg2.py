@@ -7,7 +7,7 @@ from memory import ReplayMemory, Experience
 from torch.optim import Adam
 import torch.nn as nn
 import numpy as np
-import torch.nn.functional as F
+
 
 def soft_update(target, source, t):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
@@ -69,22 +69,21 @@ class MADDPG:
         rewards_batch = th.stack(batch.rewards).type(FloatTensor)
         next_state_batch = th.stack(batch.next_states).type(FloatTensor)
 
-        next_actions = th.stack([self.actors_target[agent](next_state_batch[:, agent, :]) for agent in range(self.n_agents)])
-        next_actions = next_actions.transpose(0, 1).contiguous()
-
         for i in range(self.n_agents):
+            with torch.no_grad():
+                next_actions = th.stack([self.actors_target[agent](next_state_batch[:, agent, :]) for agent in range(self.n_agents)])
+                next_actions = next_actions.transpose(0, 1).contiguous()
+                q_next = self.critics_target[i](
+                    next_state_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
+                )
+                target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next
             # 更新critic网络
             current_Q = self.critics[i](
                 states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
             )
-            q_next = self.critics_target[i](
-                next_state_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
-            )
-            target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next
-
             critic_loss = nn.MSELoss()(current_Q, target_Q)
             self.critic_optimizer[i].zero_grad()
-            critic_loss.backward(retain_graph=True)
+            critic_loss.backward()
             self.critic_optimizer[i].step()
 
             # 更新actor网络
@@ -103,7 +102,7 @@ class MADDPG:
             self.actor_optimizer[i].step()
 
             # 更新神经网络
-            if self.steps_done % 20 == 0:
+            if self.steps_done % 100 == 0:
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
 
@@ -111,18 +110,19 @@ class MADDPG:
         FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
         actions = th.zeros(self.n_agents, self.n_actions)
         for i in range(self.n_agents):
-            state = states[i, :].detach().unsqueeze(0)
+            state = states[i, :].unsqueeze(0)
             action = self.actors[i](state).squeeze()
             if exploration:
-                action_noise = th.from_numpy((40 * np.random.random(self.n_actions) - 20) * self.epsilon)
-                if self.epsilon > 0.05:
-                    self.epsilon *= 0.99999
-                else:
-                    self.epsilon = 0.05
-                action += action_noise.type(FloatTensor)
-
+                p = np.random.random(1)[0]
+                if self.episode_done < self.episodes_before_train or self.epsilon > p:
+                    action = th.from_numpy((40 * np.random.random(self.n_actions) - 20))
+            action = action.type(FloatTensor)
             action = th.clamp(action, -20, 20)
             actions[i, :] = action
+        if self.epsilon > 0.05:
+            self.epsilon *= 0.99998
+        else:
+            self.epsilon = 0.05
         self.steps_done += 1
         return actions
 

@@ -34,11 +34,11 @@ class Actor(nn.Module):
     def __init__(self, dim_observation, dim_action):
         super(Actor, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(dim_observation, 512),
+            nn.Linear(dim_observation, 256),
             nn.ReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(256, dim_action),
+            nn.Linear(128, dim_action),
             nn.Tanh()
         )
 

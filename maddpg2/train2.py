@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # 是否载入模型
     load = False
     # 载入环境
-    pois = np.load("../data/easypoi.npy", allow_pickle=True)
+    pois = np.load("../data/pois.npy", allow_pickle=True)
     # obstacles = np.load("../data/obstacles.npy")
     obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
@@ -20,17 +20,15 @@ if __name__ == "__main__":
     env.share_reward = True
     # 配置参数
     np.random.seed(int(time.time()))
-
     n_agents = 3
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
     batch_size = 16
-
     n_episode = 5000
+    episodes_before_train = 5
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
-    episodes_before_train = 10
 
     maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity, episodes_before_train)
     FloatTensor = th.cuda.FloatTensor if maddpg.use_cuda else th.FloatTensor
@@ -59,8 +57,9 @@ if __name__ == "__main__":
         maddpg.episode_done += 1
         avg_reward += total_reward
         print('Episode: %d, reward = %f avg_reward = %f' % (i_episode, total_reward, avg_reward/(i_episode + 1)))
-        if i_episode % 100 == 0:
+        if i_episode % 50 == 0:
             maddpg.save_model()
+            print('epsilon: ', maddpg.epsilon)
 
         if maddpg.episode_done == maddpg.episodes_before_train:
             print('training now begins...')

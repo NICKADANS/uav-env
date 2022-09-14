@@ -152,7 +152,7 @@ class UavEnvironment:
                 radius = 15
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward = 100
+                        reward = 10
                         poi.done = 1
                         # 绘制poi
                         if self.is_render:
