@@ -24,9 +24,9 @@ if __name__ == "__main__":
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 256
+    batch_size = 16
     n_episode = 10000
-    episodes_before_train = 100
+    episodes_before_train = 10
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
     maddpg = MADDPG(n_states, n_actions, n_agents, batch_size, episodes_before_train)

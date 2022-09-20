@@ -53,6 +53,7 @@ class MADDPG:
         next_actions = T.stack(next_actions).to(device)
         next_actions = next_actions.transpose(0, 1).contiguous()
 
+        # 更新每个agent
         for i, agent in enumerate(self.agents):
             # 更新 critic 网络
             q_current = agent.critic.forward(states.view(self.batch_size, -1), actions.view(self.batch_size, -1))
@@ -71,8 +72,9 @@ class MADDPG:
             action_i = agent.actor.forward(state_i)
             # 重新选择联合动作中当前agent的动作，其他agent的动作不变
             actions_clone = actions.clone()
+
             actions_clone[:, i, :] = action_i
-            actor_loss = agent.critic.forward(states.view(self.batch_size, -1), actions_clone.view(self.batch_size, -1)).flatten()
+            actor_loss = agent.critic.forward(states.view(self.batch_size, -1), actions_clone.view(self.batch_size, -1))
             actor_loss = -T.mean(actor_loss)
             agent.actor.optimizer.zero_grad()
             actor_loss.backward(retain_graph=True)

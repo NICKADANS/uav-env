@@ -7,6 +7,7 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
+
 from poi import PoI
 
 
@@ -110,6 +111,7 @@ class UavEnvironment:
 
     # 执行行为
     def step(self, actions):
+        actions = deepcopy(self.uavs[0].v_max * actions)
         reward_n = []
         done_n = []
         info_n = {'n': []}
@@ -147,12 +149,12 @@ class UavEnvironment:
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = -0.1
+                reward = -0.01
                 # 判断是否采集了某个兴趣点
                 radius = 15
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward = 10
+                        reward = 1
                         poi.done = 1
                         # 绘制poi
                         if self.is_render:
@@ -161,7 +163,7 @@ class UavEnvironment:
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
-                        reward = -1
+                        reward = -10
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
@@ -169,7 +171,7 @@ class UavEnvironment:
 
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -1
+                reward = -10
                 # 更新该无人机的位置
                 if new_x < 0:
                     uav.x = 0
@@ -205,7 +207,10 @@ class UavEnvironment:
             for u in self.uavs:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
                 i += 1
-            uav.obs = [0.001*x for x in uav.obs]
+
+            _range = np.max(uav.obs) - np.min(uav.obs)
+            uav.obs = (uav.obs - np.min(uav.obs)) / _range
+
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
@@ -220,17 +225,19 @@ if __name__ == "__main__":
             '''
             action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
             '''
+
             for uav in env.uavs:
                 actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
             obs, rewards, dones, _ = env.step(actions)
             if env.uavs[0].energy == 0:
+                cv2.imshow("env", env.render.image)
+                cv2.waitKey(0)
                 break
         count = 0
         for p in env.pois:
             if p.done == 1:
                 count += 1
         print(count)
-        cv2.imshow("env", env.render.image)
-        cv2.waitKey(0)
+
     # print(env._get_obs(uavs[0]))
     # obsn, rewn, donen, _ = env.step(actions)

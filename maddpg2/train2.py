@@ -12,21 +12,21 @@ if __name__ == "__main__":
     # 是否载入模型
     load = False
     # 载入环境
-    pois = np.load("../data/easypoi.npy", allow_pickle=True)
+    pois = np.load("../data/pois.npy", allow_pickle=True)
     # obstacles = np.load("../data/obstacles.npy")
     obstacles = []
-    env = UavEnvironment(pois, obstacles, 3)
+    env = UavEnvironment(pois, obstacles, 1)
     env.is_render = True
     env.share_reward = True
     # 配置参数
     np.random.seed(int(time.time()))
-    n_agents = 3
+    n_agents = 1
     n_states = env.obsvervation_space.dim
     n_actions = env.action_space.dim
     capacity = 100000
-    batch_size = 16
+    batch_size = 256
     n_episode = 5000
-    episodes_before_train = 10
+    episodes_before_train = 100
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
 

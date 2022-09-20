@@ -32,14 +32,15 @@ class MADDPG:
         self.memory = ReplayMemory(capacity)
         self.batch_size = batch_size
         self.use_cuda = th.cuda.is_available()
-        self.episodes_before_train = episodes_before_train
 
+
+        # 用于更新q值
         self.GAMMA = 0.95
+        # 用于softupdate神经网络
         self.tau = 0.01
-        self.scale_reward = 0.01
+        # 用来调整神经网络的噪声
         self.epsilon = 1.0
 
-        self.var = [1.0 for _ in range(n_agents)]
         self.critic_optimizer = [Adam(critic.parameters(), lr=0.001) for critic in self.critics]
         self.actor_optimizer = [Adam(actor.parameters(), lr=0.0001) for actor in self.actors]
 
@@ -53,9 +54,10 @@ class MADDPG:
             for x in self.critics_target:
                 x.cuda()
 
-        self.steps_done = 0
+        self.episodes_before_train = episodes_before_train
         self.episode_done = 0
 
+    # 更新策略
     def update_policy(self):
         if self.episode_done <= self.episodes_before_train:
             return
@@ -68,6 +70,8 @@ class MADDPG:
             actions_batch = th.stack(batch.actions).type(FloatTensor)
             rewards_batch = th.stack(batch.rewards).type(FloatTensor)
             next_state_batch = th.stack(batch.next_states).type(FloatTensor)
+
+            # 更新critic网络
             with torch.no_grad():
                 next_actions = th.stack([self.actors_target[agent](next_state_batch[:, agent, :]) for agent in range(self.n_agents)])
                 next_actions = next_actions.transpose(0, 1).contiguous()
@@ -75,7 +79,6 @@ class MADDPG:
                     next_state_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
                 )
                 target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next
-            # 更新critic网络
             current_Q = self.critics[i](
                 states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
             )
@@ -103,6 +106,7 @@ class MADDPG:
             soft_update(self.critics_target[i], self.critics[i], self.tau)
             soft_update(self.actors_target[i], self.actors[i], self.tau)
 
+    # 挑选行为
     def select_action(self, states, exploration=True):
         FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
         actions = th.zeros(self.n_agents, self.n_actions)
@@ -110,17 +114,15 @@ class MADDPG:
             state = states[i, :].unsqueeze(0)
             action = self.actors[i](state).squeeze()
             if exploration:
-                p = np.random.random(1)[0]
+                p = np.random.rand()
                 if self.episode_done < self.episodes_before_train or self.epsilon > p:
-                    action = th.from_numpy((40 * np.random.random(self.n_actions) - 20))
+                    noise = th.from_numpy(2 * np.random.random(self.n_actions) - 1).type(FloatTensor)  # 生成一个位于[-1, 1]之间的随机数
+                    action = noise
             action = action.type(FloatTensor)
-            action = th.clamp(action, -20, 20)
+            action = th.clamp(action, -1.0, 1.0)
             actions[i, :] = action
-        if self.epsilon > 0.05:
+        if self.episode_done > self.episodes_before_train and self.epsilon > 0.05:
             self.epsilon *= 0.99998
-        else:
-            self.epsilon = 0.05
-        self.steps_done += 1
         return actions
 
     # 保存模型
@@ -141,6 +143,5 @@ class MADDPG:
                     th.load('critic' + str(i) + '.pth', map_location=th.device('cpu')))
                 self.actors[i].load_state_dict(
                     th.load('actor' + str(i) + '.pth', map_location=th.device('cpu')))
-
         self.critics_target = deepcopy(self.critics)
         self.actors_target = deepcopy(self.actors)
