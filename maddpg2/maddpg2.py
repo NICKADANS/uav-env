@@ -69,15 +69,19 @@ class MADDPG:
             states_batch = th.stack(batch.states).type(FloatTensor)
             actions_batch = th.stack(batch.actions).type(FloatTensor)
             rewards_batch = th.stack(batch.rewards).type(FloatTensor)
-            next_state_batch = th.stack(batch.next_states).type(FloatTensor)
+            next_states_batch = th.stack(batch.next_states).type(FloatTensor)
+
+            dones_batch = th.stack(batch.dones).type(FloatTensor)
 
             # 更新critic网络
             with torch.no_grad():
-                next_actions = th.stack([self.actors_target[agent](next_state_batch[:, agent, :]) for agent in range(self.n_agents)])
+                next_actions = th.stack([self.actors_target[agent](next_states_batch[:, agent, :]) for agent in range(self.n_agents)])
                 next_actions = next_actions.transpose(0, 1).contiguous()
                 q_next = self.critics_target[i](
-                    next_state_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
+                    next_states_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
                 )
+                is_notdone = abs(-1 + dones_batch[:, i].view(self.batch_size, -1))  # 结束的时候 q_next为0，否则为1
+                q_next *= is_notdone
                 target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next
             current_Q = self.critics[i](
                 states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)

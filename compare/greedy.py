@@ -26,12 +26,12 @@ def select_actions(env):
             dy = poi1.y - uav.y
         elif np.abs(poi1.x - uav.x) <= uav.v_max:  # x 直接到达
             dx = poi1.x - uav.x
-            dy = 20 if poi1.y > uav.y else -20
+            dy = uav.v_max if poi1.y > uav.y else -uav.v_max
         elif np.abs(poi1.y - uav.y) <= uav.v_max:  # y 直接到达
             dy = poi1.y - uav.y
-            dx = 20 if poi1.x > uav.x else -20
+            dx = uav.v_max if poi1.x > uav.x else -uav.v_max
         else:
-            dx = 20 if poi1.x > uav.x else -20
-            dy = 20 if poi1.y > uav.y else -20
+            dx = uav.v_max if poi1.x > uav.x else -uav.v_max
+            dy = uav.v_max if poi1.y > uav.y else -uav.v_max
         actions.append([dx, dy])
     return actions

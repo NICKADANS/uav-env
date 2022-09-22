@@ -174,6 +174,7 @@ class UavEnvironment:
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
                         reward = -10
+                        uav.energy = 0
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
@@ -181,6 +182,7 @@ class UavEnvironment:
             else:  # 无人机位于界外
                 # 计算奖励
                 reward = -10
+                uav.energy = 0
                 # 更新该无人机的位置
                 if new_x < 0:
                     uav.x = 0
@@ -207,10 +209,13 @@ class UavEnvironment:
             x_right = int(uav.x + uav.v_max) if int(uav.x + uav.v_max) <= 999 else 999
             y_top = int(uav.y - uav.v_max) if int(uav.y - uav.v_max) >= 0 else 0
             y_bottom = int(uav.y + uav.v_max) if int(uav.y + uav.v_max) <= 999 else 999
-            uav.obs = img[y_top:y_bottom+1, x_left:x_right+1, 0]/255.0
-            uav.obs = np.reshape(uav.obs, ((uav.v_max*2+1)**2, ))
+            for i in range(y_top, y_bottom+1):
+                for j in range(x_left, x_right+1):
+                    uav.obs[i-y_top, j-x_left] = img[i, j, 0]/255.0
+            uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
             cv2.waitKey(0)
         return [uav.obs for uav in self.uavs]
+
 
 if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
