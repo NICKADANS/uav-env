@@ -111,7 +111,9 @@ class UavEnvironment:
 
     # 执行行为
     def step(self, actions):
-        actions = deepcopy(self.uavs[0].v_max * actions)
+        actions = deepcopy(actions)
+        for a in actions:
+            a *= self.uavs[0].v_max
         reward_n = []
         done_n = []
         info_n = {'n': []}
@@ -227,7 +229,7 @@ if __name__ == "__main__":
             '''
 
             for uav in env.uavs:
-                actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
+                actions.append(2 * np.random.random(2) - 1)
             obs, rewards, dones, _ = env.step(actions)
             if env.uavs[0].energy == 0:
                 cv2.imshow("env", env.render.image)

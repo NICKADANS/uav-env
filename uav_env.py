@@ -3,10 +3,13 @@
 # --------------------------------------------------------
 from copy import deepcopy
 
+import numpy
+
 import common
 import cv2
 import numpy as np
 from uav import UAV
+
 from poi import PoI
 
 
@@ -16,26 +19,26 @@ class UavEnvRender:
         self.height = height
         self.width = width
         # 生成一张默认大小为 1000x1000 的空白图
-        self.image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        self.trace_image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         # 调整BGR值，将图设为白色
-        self.image[:, :] = (255, 255, 255)
+        self.trace_image[:, :] = (255, 255, 255)
+        self.realtime_image = deepcopy(self.trace_image)
         # 兴趣点，障碍物及无人机
         self.pois = deepcopy(pois)
         self.uavs = deepcopy(uavs)
         self.init_pois = deepcopy(pois)
         self.init_uavs = deepcopy(uavs)
-
         self.obstacles = obstacles
 
     # 重置图片
     def reset(self):
-        self.image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        self.image[:, :] = (255, 255, 255)
+        self.trace_image[:, :] = (255, 255, 255)
         self.pois = deepcopy(self.init_pois)
         self.uavs = deepcopy(self.init_uavs)
         self.draw_pois(self.pois)
-        self.draw_uavs(self.uavs)
         self.draw_obs(self.obstacles)
+        self.realtime_image = deepcopy(self.trace_image)
+        self.draw_uavs(self.uavs)
 
     # 绘制兴趣点
     def draw_pois(self, pois):
@@ -45,9 +48,11 @@ class UavEnvRender:
     # 更新兴趣点状态
     def draw_poi(self, poi):
         if poi.done == 1:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_OVER, -1)
+            cv2.circle(self.trace_image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_OVER, -1)
+            cv2.circle(self.realtime_image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_OVER, -1)
         else:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.trace_image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.realtime_image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_GATHER, -1)
 
     # 绘制无人机
     def draw_uavs(self, uavs):
@@ -56,63 +61,32 @@ class UavEnvRender:
 
     # 更新无人机状态
     def draw_uav(self, uav):
-        cv2.circle(self.image, (int(uav.x), int(uav.y)), 3, uav.color, -1)
+        cv2.circle(self.trace_image, (int(uav.x), int(uav.y)), 3, uav.color, -1)
 
     # 绘制障碍物
     def draw_obs(self, obstacles):
         for obs in obstacles:
-            cv2.circle(self.image, (int(obs[0]), int(obs[1])), 1, common.OBS_COLOR, -1)
+            cv2.circle(self.trace_image, (int(obs[0]), int(obs[1])), 1, common.OBS_COLOR, -1)
 
+    # 画当前的无人机图
+    def draw_current_uavs(self, uavs):
+        img = deepcopy(self.realtime_image)
+        for uav in uavs:
+            cv2.circle(img, (int(uav.x), int(uav.y)), 3, uav.color, -1)
+        return img
 
+# 对于每个Agent的观测空间
 class ObservationSpace:
-    def __init__(self, pois, obstacles, uavs):
+    def __init__(self, uavs):
         # 状态空间维度
-        self.dim = len(pois) * 3 + len(obstacles) * 2 + len(uavs) * 3  # poi的信息，障碍物的信息，无人机的信息
-        # 状态空间内容
-        self.observations = []
-        # 各个观测值在向量中的起点
-        self.poi_index = 0
-        self.obs_index = len(pois) * 3
-        self.uav_index = self.obs_index + len(obstacles) * 2
-        # 初始化观测空间
-        for poi in pois:
-            self.observations.extend(poi.to_list())
-        for obstacle in obstacles:
-            self.observations.extend(obstacle)
-        for uav in uavs:
-            l = [uav.x, uav.y, uav.energy]
-            self.observations.extend(l)
-
-    # 更新状态空间中的兴趣点观测值
-    def update_pois_obs(self, pois):
-        idx = self.poi_index
-        for poi in pois:
-            self.observations[idx+2] = poi.done
-            idx += 3
-        return self.observations[self.poi_index: self.obs_index]
-
-    # 更新状态空间中的无人机状态值
-    def update_uavs_obs(self, uavs):
-        idx = self.uav_index
-        for uav in uavs:
-            self.observations[idx] = uav.x
-            idx += 1
-            self.observations[idx] = uav.y
-            idx += 1
-            self.observations[idx] = uav.energy
-            idx += 1
-        return self.observations[self.uav_index:]
+        self.dim = uavs[0].view_range * uavs[0].view_range
 
 
+# 对于每个Agent的行为空间
 class ActionSpace:
     def __init__(self, uavs):
         # 行为空间维度
-        self.dim = 2  # 需要得到所有无人机的速度
-        # 行为空间内容:所有UAV的速度
-        self.actions = []
-        for uav in uavs:
-            l = [uav.v_x, uav.v_y]
-            self.actions.append(l)
+        self.dim = 2  # 无人机的速度
 
 
 class UavEnvironment:
@@ -120,38 +94,35 @@ class UavEnvironment:
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
         self.pois = deepcopy(pois)
         self.obstacles = obstacles
-        self.uavs = [UAV() for i in range(uav_num)]
+        self.uavs = [UAV(color= common.UAV_COLOR[i]) for i in range(uav_num)]
         self.init_pois = deepcopy(pois)
         # 初始化观测空间和行为空间，保存初始观测值
-        self.obsvervation_space = ObservationSpace(self.pois, self.obstacles, self.uavs)
+        self.obsvervation_space = ObservationSpace(self.uavs)
         self.action_space = ActionSpace(self.uavs)
-        self.init_obs = deepcopy(self.obsvervation_space.observations)
-        # 为每个无人机初始化观测值
-        for uav in self.uavs:
-            uav.obs = self.obsvervation_space.observations
         # 初始化渲染
         self.render = UavEnvRender(pois=self.pois, obstacles=self.obstacles)
-        self.is_render = False # 默认不开启渲染
+        self.is_render = True # 默认开启渲染
         # 环境是否共享奖励值，默认为共享
         self.share_reward = True
+        # 初始化环境
+        self.reset()
 
     # 重置环境状态
     def reset(self):
         # 重置兴趣点和观测值
         self.pois = deepcopy(self.init_pois)
-        self.obsvervation_space.observations = deepcopy(self.init_obs)
         # 重置每个无人机
         for uav in self.uavs:
             uav.reset()
-            uav.obs = self.obsvervation_space.observations
         # 重置渲染
-        if self.is_render:
-            self.render.reset()
-        new_state_n = [self.obsvervation_space.observations for _ in range(len(self.uavs))]
-        return new_state_n
+        self.render.reset()
+        return self.cal_env_obs()
 
     # 执行行为
     def step(self, actions):
+        actions = deepcopy(actions)
+        for a in actions:
+            a *= self.uavs[0].v_max
         reward_n = []
         done_n = []
         info_n = {'n': []}
@@ -167,12 +138,13 @@ class UavEnvironment:
                 done_n.append(0)
             else:
                 done_n.append(1)
+        # 计算
+        new_state_n = self.cal_env_obs()
         # 倘若共享奖励值
         reward = np.sum(reward_n)
         if self.share_reward:
             reward_n = [reward for _ in range(len(self.uavs))]
         # 环境状态值
-        new_state_n = [self.obsvervation_space.observations for _ in range(len(self.uavs))]
         return new_state_n, reward_n, done_n, info_n
 
     # 为环境里的单个无人机执行行为
@@ -188,33 +160,27 @@ class UavEnvironment:
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
                 # 计算奖励
-                reward = -0.001
+                reward = -0.01
                 # 判断是否采集了某个兴趣点
-                raidus = 15
+                radius = 15
                 for poi in self.pois:
-                    if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= raidus**2 and poi.done == 0:
+                    if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
                         reward = 1
                         poi.done = 1
                         # 绘制poi
-                        if self.is_render:
-                            self.render.draw_poi(poi)
+                        self.render.draw_poi(poi)
                         break
                 # 判断是否撞到了障碍物
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
-                        reward = -1
+                        reward = -10
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
-                # 更新环境观测值
-                self.obsvervation_space.update_pois_obs(self.pois)
-                self.obsvervation_space.update_uavs_obs(self.uavs)
-                # 更新无人机的观测值
-                uav.obs = self.obsvervation_space.observations
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -1
+                reward = -10
                 # 更新该无人机的位置
                 if new_x < 0:
                     uav.x = 0
@@ -224,20 +190,27 @@ class UavEnvironment:
                     uav.x = 999
                 if new_y >= 1000:
                     uav.y = 999
-                # 更新环境的观测值
-                self.obsvervation_space.update_uavs_obs(self.uavs)
-                # 更新无人机观测值
-                uav.obs = self.obsvervation_space.observations
         else:  # 没电执行下一步动作
             uav.energy = 0
-        # 重置无人机的速度
-        uav.v_x = 0
-        uav.v_y = 0
         # 渲染无人机的新位置
         if self.is_render:
             self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
+    # 计算环境归一化后的观测值
+    def cal_env_obs(self):
+        img = self.render.draw_current_uavs(self.uavs)
+        for uav in self.uavs:
+            uav.obs = np.zeros((uav.view_range, uav.view_range), dtype=np.float)
+            # 观测区域：一个 view_range * view_range 的正方形区域
+            x_left = int(uav.x - uav.v_max) if int(uav.x - uav.v_max) >= 0 else 0
+            x_right = int(uav.x + uav.v_max) if int(uav.x + uav.v_max) <= 999 else 999
+            y_top = int(uav.y - uav.v_max) if int(uav.y - uav.v_max) >= 0 else 0
+            y_bottom = int(uav.y + uav.v_max) if int(uav.y + uav.v_max) <= 999 else 999
+            uav.obs = img[y_top:y_bottom+1, x_left:x_right+1, 0]/255.0
+            uav.obs = np.reshape(uav.obs, ((uav.v_max*2+1)**2, ))
+            cv2.waitKey(0)
+        return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
@@ -245,27 +218,25 @@ if __name__ == "__main__":
     obstacles = []
     env = UavEnvironment(pois, obstacles, 3)
     for i in range(0, 100):
-        env.reset()
+        obs = env.reset()
         while True:
             actions = []
             '''
             action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
             '''
+
             for uav in env.uavs:
-                actions.append(2 * uav.v_max * np.random.random(2) - uav.v_max)
+                actions.append(2 * np.random.random(2) - 1)
             obs, rewards, dones, _ = env.step(actions)
-            done = 1
-            for d in dones:
-                if d == 0:
-                    done = 0
-                    break
-            if done ==  1:
+            if env.uavs[0].energy == 0:
+                cv2.imshow("env", env.render.draw_current_uavs(env.uavs))
+                cv2.waitKey(0)
                 break
         count = 0
         for p in env.pois:
             if p.done == 1:
                 count += 1
         print(count)
-        cv2.imshow("env", env.render.image)
+
     # print(env._get_obs(uavs[0]))
     # obsn, rewn, donen, _ = env.step(actions)

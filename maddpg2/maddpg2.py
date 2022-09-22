@@ -121,8 +121,6 @@ class MADDPG:
             action = action.type(FloatTensor)
             action = th.clamp(action, -1.0, 1.0)
             actions[i, :] = action
-        if self.episode_done > self.episodes_before_train and self.epsilon > 0.05:
-            self.epsilon *= 0.99998
         return actions
 
     # 保存模型

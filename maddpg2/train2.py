@@ -53,7 +53,8 @@ if __name__ == "__main__":
             total_reward += reward[0]
             obs = obs_
             maddpg.update_policy()
-
+        if i_episode > episodes_before_train and maddpg.epsilon > 0.05:
+            maddpg.epsilon -= 0.001
         maddpg.episode_done += 1
         avg_reward += total_reward
         print('Episode: %d, reward = %f avg_reward = %f' % (i_episode, total_reward, avg_reward/(i_episode + 1)))
