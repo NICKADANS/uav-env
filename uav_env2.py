@@ -7,7 +7,7 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
-
+from compare import greedy
 from poi import PoI
 
 
@@ -84,7 +84,7 @@ class UavEnvironment:
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
         self.pois = deepcopy(pois)
         self.obstacles = obstacles
-        self.uavs = [UAV() for i in range(uav_num)]
+        self.uavs = [UAV(color= common.UAV_COLOR[i]) for i in range(uav_num)]
         self.init_pois = deepcopy(pois)
         # 初始化观测空间和行为空间，保存初始观测值
         self.obsvervation_space = ObservationSpace(self.pois, self.obstacles, self.uavs)
@@ -153,7 +153,7 @@ class UavEnvironment:
                 # 计算奖励
                 reward = -0.01
                 # 判断是否采集了某个兴趣点
-                radius = 15
+                radius = uav.v_max
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
                         reward = 1
@@ -166,6 +166,7 @@ class UavEnvironment:
                 for obstacle in self.obstacles:
                     if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
                         reward = -10
+                        uav.energy = 0
                         break
                 # 更新该无人机的位置
                 uav.x = new_x
@@ -174,6 +175,7 @@ class UavEnvironment:
             else:  # 无人机位于界外
                 # 计算奖励
                 reward = -10
+                uav.energy = 0
                 # 更新该无人机的位置
                 if new_x < 0:
                     uav.x = 0
@@ -186,8 +188,7 @@ class UavEnvironment:
         else:  # 没电执行下一步动作
             uav.energy = 0
         # 渲染无人机的新位置
-        if self.is_render:
-            self.render.draw_uav(uav)
+        self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
     # 计算环境归一化后的观测值
@@ -219,18 +220,24 @@ if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = []
-    env = UavEnvironment(pois, obstacles, 3)
+    env = UavEnvironment(pois, obstacles, 1)
     for i in range(0, 100):
         env.reset()
-        while True:
-            actions = []
-            '''
-            action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
-            '''
-
-            for uav in env.uavs:
-                actions.append(2 * np.random.random(2) - 1)
+        gameover = False
+        while not gameover:
+            # actions = []
+            # '''
+            # action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
+            # '''
+            # for uav in env.uavs:
+            #     actions.append(2 * np.random.random(2) - 1)
+            actions = greedy.select_actions(env)
             obs, rewards, dones, _ = env.step(actions)
+            # 判断游戏是否结束
+            gameover = True
+            for d in dones:
+                if d == 0:
+                    gameover = False
             if env.uavs[0].energy == 0:
                 cv2.imshow("env", env.render.image)
                 cv2.waitKey(0)

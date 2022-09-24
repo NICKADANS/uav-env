@@ -13,8 +13,6 @@ class UAV:
         self.x = deepcopy(x)
         self.y = deepcopy(y)
         # 速度信息
-        self.v_x = 0
-        self.v_y = 0
         self.v_max = v_max
         # 电量信息
         self.energy = 1  # 当前电量
@@ -28,28 +26,9 @@ class UAV:
     def reset(self):
         self.x = self.init_x
         self.y = self.init_y
-        self.v_x = 0
-        self.v_y = 0
         self.obs = []
         self.energy = 1
 
     # 计算执行某个行为的能量损耗(绝对值)
     def cal_energy_loss(self, action):
         return 0.005
-
-    # 更新速度，并将其修正到合适的区间
-    def set_velocity(self, v_x, v_y):
-        # x轴速度
-        if v_x > self.v_max:
-            self.v_x = self.v_max
-        elif v_x < -self.v_max:
-            self.v_x = -self.v_max
-        else:
-            self.v_x = v_x
-        # y轴速度
-        if v_y > self.v_max:
-            self.v_y = self.v_max
-        elif v_y < -self.v_max:
-            self.v_y = -self.v_max
-        else:
-            self.v_y = v_y

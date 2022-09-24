@@ -9,7 +9,7 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
-
+from compare import greedy
 from poi import PoI
 
 
@@ -229,12 +229,11 @@ if __name__ == "__main__":
             '''
             action = v_x和v_y 属于 [-uav.v_max, uav.v_max]
             '''
-
             for uav in env.uavs:
                 actions.append(2 * np.random.random(2) - 1)
             obs, rewards, dones, _ = env.step(actions)
             if env.uavs[0].energy == 0:
-                cv2.imshow("env", env.render.draw_current_uavs(env.uavs))
+                cv2.imshow("env", env.render.trace_image)
                 cv2.waitKey(0)
                 break
         count = 0
