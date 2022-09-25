@@ -5,5 +5,5 @@ import numpy as np
 def select_actions(env):
     actions = []
     for uav in env.uavs:
-        actions.append(2 * np.random.random(2) - 1)
+        actions.append(2 * env.uavs[0].v_max * np.random.random(2) - env.uavs[0].v_max)
     return actions

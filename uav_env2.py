@@ -7,7 +7,10 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
-from compare import greedy
+
+from compare import greedy, random
+
+
 from poi import PoI
 
 
@@ -111,9 +114,6 @@ class UavEnvironment:
 
     # 执行行为
     def step(self, actions):
-        actions = deepcopy(actions)
-        for a in actions:
-            a *= self.uavs[0].v_max
         reward_n = []
         done_n = []
         info_n = {'n': []}
@@ -142,7 +142,7 @@ class UavEnvironment:
     def _step(self, uav, action):
         reward = 0
         # 判断是否有电执行下一步动作
-        if uav.energy > uav.cal_energy_loss(action):
+        if uav.energy >= uav.cal_energy_loss(action):
             # 扣除本次行为的电量
             uav.energy -= uav.cal_energy_loss(action)
             # 计算无人机新的坐标
@@ -191,7 +191,34 @@ class UavEnvironment:
         self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
-    # 计算环境归一化后的观测值
+    # 估计执行一步action所得的奖励
+    def cal_reward(self, action):
+        total_reward = 0
+        for i, uav in enumerate(self.uavs):
+            # 没电执行下一步动作
+            if uav.energy < uav.cal_energy_loss(action):
+                reward = 0
+            else:
+                new_x = uav.x + action[i][0]
+                new_y = uav.y + action[i][1]
+                # 如果无人机下一步位于界内
+                if 0 <= new_x < 1000 and 0 <= new_y < 1000:
+                    # 如果无人机什么都没做
+                    reward = -0.01
+                    # 如果无人机在采集兴趣点
+                    for poi in self.pois:
+                        radius = uav.v_max
+                        if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
+                            reward = 1
+                            break
+                    # 如果无人机撞到障碍物
+                    # pass
+                # 如果无人机位于界外
+                else:
+                    reward = -10
+            total_reward += reward
+        return total_reward
+
     def cal_env_obs(self):
         for uav in self.uavs:
             if len(uav.obs) == 0:
@@ -220,7 +247,7 @@ if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = []
-    env = UavEnvironment(pois, obstacles, 1)
+    env = UavEnvironment(pois, obstacles, 5)
     for i in range(0, 100):
         env.reset()
         gameover = False

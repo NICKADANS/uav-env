@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
+import torch
 import sys
 sys.path.append('..')
 from poi import PoI
@@ -31,17 +32,20 @@ def select_actions(env):
         else:
             target = env.pois[target]
 
-        if np.abs(target.x - uav.x) <= uav.v_max and np.abs(target.y - uav.y) <= uav.v_max:  # x和y能直接到达
+        if abs(target.x - uav.x) <= uav.v_max and abs(target.y - uav.y) <= uav.v_max:  # x和y能直接到达
             dx = target.x - uav.x
             dy = target.y - uav.y
-        elif np.abs(target.x - uav.x) <= uav.v_max:  # x 能直接到达
+        elif abs(target.x - uav.x) <= uav.v_max:  # x 能直接到达
             dx = target.x - uav.x
             dy = uav.v_max if target.y > uav.y else -uav.v_max
-        elif np.abs(target.y - uav.y) <= uav.v_max:  # y 能直接到达
+        elif abs(target.y - uav.y) <= uav.v_max:  # y 能直接到达
             dy = target.y - uav.y
             dx = uav.v_max if target.x > uav.x else -uav.v_max
         else:
             dx = uav.v_max if target.x > uav.x else -uav.v_max
             dy = uav.v_max if target.y > uav.y else -uav.v_max
+        dx = np.float(dx)
+        dy = np.float(dy)
         actions.append([dx, dy])
+    actions = torch.Tensor(actions)
     return actions
