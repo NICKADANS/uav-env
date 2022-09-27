@@ -9,6 +9,7 @@ import torch.nn as nn
 import numpy as np
 
 
+
 def soft_update(target, source, t):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_((1 - t) * target_param.data + t * source_param.data)
@@ -42,7 +43,7 @@ class MADDPG:
         self.epsilon = 1.0
 
         self.critic_optimizer = [Adam(critic.parameters(), lr=0.001) for critic in self.critics]
-        self.actor_optimizer = [Adam(actor.parameters(), lr=0.0001) for actor in self.actors]
+        self.actor_optimizer = [Adam(actor.parameters(), lr=0.001) for actor in self.actors]
 
         if self.use_cuda:
             for x in self.actors:
@@ -70,45 +71,37 @@ class MADDPG:
             actions_batch = th.stack(batch.actions).type(FloatTensor)
             rewards_batch = th.stack(batch.rewards).type(FloatTensor)
             next_states_batch = th.stack(batch.next_states).type(FloatTensor)
-
             dones_batch = th.stack(batch.dones).type(FloatTensor)
-
             # 更新critic网络
-            with torch.no_grad():
-                next_actions = th.stack([self.actors_target[agent](next_states_batch[:, agent, :]) for agent in range(self.n_agents)])
-                next_actions = next_actions.transpose(0, 1).contiguous()
-                q_next = self.critics_target[i](
-                    next_states_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
-                )
-                is_notdone = abs(-1 + dones_batch[:, i].view(self.batch_size, -1))  # 结束的时候 q_next为0，否则为1
-                q_next *= is_notdone
-                target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next
+            next_actions = th.stack([self.actors_target[agent](next_states_batch[:, agent, :]) for agent in range(self.n_agents)])
+            next_actions = next_actions.transpose(0, 1).contiguous()
+            q_next = self.critics_target[i](
+                next_states_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
+            )
+            target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next * (1 - dones_batch[:, i].view(self.batch_size, -1))
+
             current_Q = self.critics[i](
                 states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
             )
-            critic_loss = nn.MSELoss()(current_Q, target_Q)
+
+            critic_loss = nn.MSELoss()(current_Q, target_Q.detach())
             self.critic_optimizer[i].zero_grad()
             critic_loss.backward()
             self.critic_optimizer[i].step()
 
             # 更新actor网络
-            state_i = states_batch[:, i, :]
-            action_i = self.actors[i](state_i)
-            # 重新选择联合动作中当前agent的动作，其他agent的动作不变
-            action_batch_clone = actions_batch.clone()
-            action_batch_clone[:, i, :] = action_i
             actor_loss = -self.critics[i](
-                states_batch.view(self.batch_size, -1), action_batch_clone.view(self.batch_size, -1)
+                states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
             )
-
             actor_loss = actor_loss.mean()
             self.actor_optimizer[i].zero_grad()
             actor_loss.backward()
             self.actor_optimizer[i].step()
 
             # 软更新神经网络
-            soft_update(self.critics_target[i], self.critics[i], self.tau)
-            soft_update(self.actors_target[i], self.actors[i], self.tau)
+            if self.episode_done % 10 == 0:
+                soft_update(self.critics_target[i], self.critics[i], self.tau)
+                soft_update(self.actors_target[i], self.actors[i], self.tau)
 
     # 挑选行为
     def select_action(self, states, exploration=True):

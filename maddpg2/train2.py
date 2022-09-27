@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from maddpg2 import MADDPG
 import sys
 
@@ -40,16 +42,18 @@ if __name__ == "__main__":
         total_reward = 0.0
         for t in range(int(max_steps)):
             action = maddpg.select_action(obs).data.cpu()
+            real_action = deepcopy(10 * action)
             # render every 100 episodes to speed up training
             if i_episode % 100 == 0 and t % 20 == 0 and env.is_render:
                 filepath = '../img/' + str(i_episode / 100) + '-' + str(t) + '.jpg'
                 print(filepath)
                 cv2.imwrite(filepath, env.render.image)
-            obs_, reward, done, _ = env.step(action.numpy())
+            obs_, reward, done, _ = env.step(real_action.numpy())
             obs_ = np.stack(obs_).astype(float)
             obs_ = th.FloatTensor(obs_).type(FloatTensor)
             reward = th.FloatTensor(reward).type(FloatTensor)
-            maddpg.memory.push(obs.data, action, obs_.data, reward)
+            done = th.FloatTensor(done).type(FloatTensor)
+            maddpg.memory.push(obs.data, action, obs_.data, reward, done)
             total_reward += reward[0]
             obs = obs_
             maddpg.update_policy()

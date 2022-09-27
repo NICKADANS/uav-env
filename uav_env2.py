@@ -163,11 +163,7 @@ class UavEnvironment:
                             self.render.draw_poi(poi)
                         break
                 # 判断是否撞到了障碍物
-                for obstacle in self.obstacles:
-                    if obstacle[0] == int(new_x) and obstacle[1] == int(new_y):
-                        reward = -10
-                        uav.energy = 0
-                        break
+
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
@@ -247,7 +243,7 @@ if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = []
-    env = UavEnvironment(pois, obstacles, 5)
+    env = UavEnvironment(pois, obstacles, 3)
     for i in range(0, 100):
         env.reset()
         gameover = False
@@ -259,7 +255,7 @@ if __name__ == "__main__":
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
             actions = greedy.select_actions(env)
-            obs, rewards, dones, _ = env.step(actions)
+            obs, rewards, dones, _ = env.step(actions.numpy())
             # 判断游戏是否结束
             gameover = True
             for d in dones:

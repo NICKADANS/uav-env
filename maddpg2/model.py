@@ -6,27 +6,17 @@ import torch.nn.functional as F
 class Critic(nn.Module):
     def __init__(self, n_agent, dim_observation, dim_action):
         super(Critic, self).__init__()
-        self.n_agent = n_agent
-        self.dim_observation = dim_observation
-        self.dim_action = dim_action
-        obs_dim = dim_observation * n_agent
-        act_dim = dim_action * n_agent
-        self.obs_net = nn.Sequential(
-            nn.Linear(obs_dim, 1024),
-            nn.ReLU(),
-        )
         self.out_net = nn.Sequential(
-            nn.Linear(1024 + act_dim, 512),
+            nn.Linear((dim_observation + dim_action) * n_agent, 1024),
             nn.ReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(1024, 512),
             nn.ReLU(),
-            nn.Linear(256, 1),
+            nn.Linear(512, 1)
         )
 
     # obs: batch_size * obs_dim
     def forward(self, obs, acts):
-        x = self.obs_net(obs)
-        combined = th.cat([x, acts], dim=1)
+        combined = th.cat([obs, acts], dim=1)
         return self.out_net(combined)
 
 
