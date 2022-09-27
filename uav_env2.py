@@ -234,8 +234,8 @@ class UavEnvironment:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
                 i += 1
 
-            _range = np.max(uav.obs) - np.min(uav.obs)
-            uav.obs = (uav.obs - np.min(uav.obs)) / _range
+            for o in uav.obs:
+                o /= 1000.0
 
         return [uav.obs for uav in self.uavs]
 

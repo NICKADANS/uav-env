@@ -41,7 +41,7 @@ class MADDPG:
         self.epsilon = 1.0
 
         self.critic_optimizer = [Adam(critic.parameters(), lr=0.001) for critic in self.critics]
-        self.actor_optimizer = [Adam(actor.parameters(), lr=0.001) for actor in self.actors]
+        self.actor_optimizer = [Adam(actor.parameters(), lr=0.0001) for actor in self.actors]
 
         if self.use_cuda:
             for x in self.actors:
@@ -71,12 +71,13 @@ class MADDPG:
             next_states_batch = th.stack(batch.next_states).type(FloatTensor)
             dones_batch = th.stack(batch.dones).type(FloatTensor)
             # 更新critic网络
-            next_actions = th.stack([self.actors_target[agent](next_states_batch[:, agent, :]) for agent in range(self.n_agents)])
-            next_actions = next_actions.transpose(0, 1).contiguous()
-            q_next = self.critics_target[i](
-                next_states_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
-            )
-            target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next * (1 - dones_batch[:, i].view(self.batch_size, -1))
+            with torch.no_grad():
+                next_actions = th.stack([self.actors_target[agent](next_states_batch[:, agent, :]) for agent in range(self.n_agents)])
+                next_actions = next_actions.transpose(0, 1).contiguous()
+                q_next = self.critics_target[i](
+                    next_states_batch.view(self.batch_size, -1), next_actions.view(self.batch_size, -1)
+                )
+                target_Q = rewards_batch[:, i].view(self.batch_size, -1) + self.GAMMA * q_next * (1 - dones_batch[:, i].view(self.batch_size, -1))
 
             current_Q = self.critics[i](
                 states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
@@ -87,19 +88,22 @@ class MADDPG:
             critic_loss.backward()
             self.critic_optimizer[i].step()
 
+            ac = actions_batch.clone()
+            for agent in range(self.n_agents):
+                state_i = states_batch[:, agent, :]
+                action_i = self.actors[agent](state_i)
+                ac[:, agent, :] = action_i
             # 更新actor网络
             actor_loss = -self.critics[i](
-                states_batch.view(self.batch_size, -1), actions_batch.view(self.batch_size, -1)
+                states_batch.view(self.batch_size, -1), ac.view(self.batch_size, -1)
             )
             actor_loss = actor_loss.mean()
             self.actor_optimizer[i].zero_grad()
             actor_loss.backward()
             self.actor_optimizer[i].step()
 
-            # 软更新神经网络
-            if self.episode_done % 10 == 0:
-                soft_update(self.critics_target[i], self.critics[i], self.tau)
-                soft_update(self.actors_target[i], self.actors[i], self.tau)
+            soft_update(self.critics_target[i], self.critics[i], self.tau)
+            soft_update(self.actors_target[i], self.actors[i], self.tau)
 
     # 挑选行为
     def select_action(self, states, exploration=True):
@@ -111,10 +115,10 @@ class MADDPG:
             if exploration:
                 p = np.random.rand()
                 if self.episode_done < self.episodes_before_train or self.epsilon > p:
-                    noise = th.from_numpy(20 * np.random.random(self.n_actions) - 10).type(FloatTensor)
+                    noise = th.from_numpy(2 * np.random.random(self.n_actions) - 1).type(FloatTensor)
                     action = noise
             action = action.type(FloatTensor)
-            action = th.clamp(action, -10.0, 10.0)
+            action = th.clamp(action, -1.0, 1.0)
             actions[i, :] = action
         return actions
 
