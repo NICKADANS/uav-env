@@ -29,7 +29,7 @@ if __name__ == "__main__":
     capacity = 100000
     batch_size = 200
     n_episode = 5000
-    episodes_before_train = 20
+    episodes_before_train = 2
     max_steps = 1/(env.uavs[0].cal_energy_loss([]))
     print('max steps per episode:', max_steps)
 
@@ -42,11 +42,14 @@ if __name__ == "__main__":
         obs = th.FloatTensor(obs).type(FloatTensor)
         total_reward = 0.0
         for t in range(int(max_steps)):
-            net_action = maddpg.select_action(obs, exploration=True).data.cpu()
-            #action = greedy.select_actions(env)
-            real_action = deepcopy(10 * net_action)
-            #if env.cal_reward(action.numpy()) < env.cal_reward(real_action.numpy()):
-            action = real_action
+            net_action = maddpg.select_action(obs, exploration=False).data.cpu()
+            greedy_action = greedy.select_actions(env)/10
+            print(net_action)
+            if env.cal_reward(10 * greedy_action.numpy()) < env.cal_reward(10 * net_action.numpy()):
+                action = deepcopy(10 * net_action)
+            else:
+                action = deepcopy(10 * greedy_action)
+                net_action = greedy_action
             # render every 100 episodes to speed up training
             if i_episode % 100 == 0 and t % 20 == 0 and env.is_render:
                 filepath = '../img/' + str(i_episode / 100) + '-' + str(t) + '.jpg'

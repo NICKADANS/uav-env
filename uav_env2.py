@@ -65,14 +65,14 @@ class UavEnvRender:
     # 绘制障碍物
     def draw_obs(self, obstacles):
         for obs in obstacles:
-            cv2.circle(self.image, (int(obs[0]), int(obs[1])), 1, common.OBS_COLOR, -1)
+            cv2.circle(self.image, (int(obs[0]), int(obs[1])), common.OBS_RADIUS, common.OBS_COLOR, -1)
 
 
 # 对于每个Agent的观测空间
 class ObservationSpace:
     def __init__(self, pois, obstacles, uavs):
         # 状态空间维度
-        self.dim = len(pois) * 1 + len(obstacles) * 2 + len(uavs) * 1  # poi的信息，障碍物的信息，无人机的信息
+        self.dim = len(pois) * 1 + len(obstacles) * 1 + len(uavs) * 1  # poi的信息，障碍物的信息，无人机的信息
 
 
 # 对于每个Agent的行为空间
@@ -163,7 +163,12 @@ class UavEnvironment:
                             self.render.draw_poi(poi)
                         break
                 # 判断是否撞到了障碍物
-
+                radius = common.OBS_RADIUS
+                for obstacle in self.obstacles:
+                    if (obstacle[0] - new_x)**2 + (obstacle[1] - new_y)**2 <= radius**2:
+                        reward = -10
+                        uav.energy = 0
+                        break
                 # 更新该无人机的位置
                 uav.x = new_x
                 uav.y = new_y
@@ -201,13 +206,19 @@ class UavEnvironment:
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
                     # 如果无人机什么都没做
                     reward = -0.01
+                    radius = uav.v_max
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
-                        radius = uav.v_max
                         if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
                             reward = 1
                             break
                     # 如果无人机撞到障碍物
+                    radius = common.OBS_RADIUS
+                    for obstacle in self.obstacles:
+                        if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
+                            reward = -10
+                            uav.energy = 0
+                            break
                     # pass
                 # 如果无人机位于界外
                 else:
@@ -226,9 +237,8 @@ class UavEnvironment:
                 i += 1
             # 更新障碍物的观测值
             for obs in self.obstacles:
-                uav.obs[i] = uav.x - obs[0]
-                uav.obs[i+1] = uav.y - obs[1]
-                i += 2
+                np.sqrt((uav.x - obs[0])**2 + (uav.y - obs[1])**2)
+                i += 1
             # 更新无人机的观测值
             for u in self.uavs:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
@@ -242,7 +252,7 @@ class UavEnvironment:
 if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
-    obstacles = []
+    obstacles = [[650, 650], [300, 400]]
     env = UavEnvironment(pois, obstacles, 3)
     for i in range(0, 100):
         env.reset()
@@ -261,7 +271,8 @@ if __name__ == "__main__":
             for d in dones:
                 if d == 0:
                     gameover = False
-            if env.uavs[0].energy == 0:
+
+            if gameover:
                 cv2.imshow("env", env.render.image)
                 cv2.waitKey(0)
                 break

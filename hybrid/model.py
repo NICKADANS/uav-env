@@ -28,8 +28,7 @@ class Actor(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 256),
             nn.ReLU(),
-            nn.Linear(256, dim_action),
-            nn.Tanh()
+            nn.Linear(256, dim_action)
         )
 
     # action output between -2 and 2
