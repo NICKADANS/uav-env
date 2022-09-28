@@ -11,9 +11,9 @@ import utils
 import model
 
 BATCH_SIZE = 256
-LEARNING_RATE = 0.0001
-GAMMA = 0.99
-TAU = 0.001
+LEARNING_RATE = 0.001
+GAMMA = 0.95
+TAU = 0.01
 
 
 class Trainer:
@@ -35,11 +35,11 @@ class Trainer:
 		self.var = 1
 		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),LEARNING_RATE)
+		self.actor_optimizer = torch.optim.SGD(self.actor.parameters(),0.0001)
 
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
+		self.critic_optimizer = torch.optim.SGD(self.critic.parameters(),0.001)
 
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -62,9 +62,9 @@ class Trainer:
 		"""
 		state = Variable(torch.from_numpy(state))
 		action = self.actor.forward(state).detach()
-		new_action = action.data.numpy() + (self.noise.sample() * self.action_lim)
+		new_action = action.data.numpy() + self.noise.sample()
 		# new_action = action.data.numpy() + (np.random.randn(self.action_dim) * self.action_lim * self.var)
-		new_action = np.clip(new_action, -10.0, 10.0)
+		new_action = np.clip(new_action, -1, 1)
 		return new_action
 
 	def optimize(self):
@@ -83,18 +83,19 @@ class Trainer:
 		a2 = self.target_actor.forward(s2).detach()
 		next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
 		# y_exp = r + gamma*Q'( s2, pi'(s2))
-		y_expected = r1 + GAMMA * next_val
+		y_expected = r1 * 0.01 + GAMMA * next_val
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
 		# compute critic loss, and update the critic
-		loss_critic = F.smooth_l1_loss(y_predicted, y_expected)
+		loss_critic = F.mse_loss(y_predicted, y_expected)
 		self.critic_optimizer.zero_grad()
 		loss_critic.backward()
 		self.critic_optimizer.step()
 
 		# ---------------------- optimize actor ----------------------
 		pred_a1 = self.actor.forward(s1)
-		loss_actor = -1 * torch.sum(self.critic.forward(s1, pred_a1))
+		loss_actor = -1 * self.critic.forward(s1, pred_a1)
+		loss_actor = loss_actor.mean()
 		self.actor_optimizer.zero_grad()
 		loss_actor.backward()
 		self.actor_optimizer.step()

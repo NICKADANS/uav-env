@@ -63,6 +63,17 @@ class OrnsteinUhlenbeckActionNoise:
 		return self.X
 
 
+def trans_env_action(action):
+	act_k = (10 - (-10)) / 2.
+	act_b = (10 + (-10)) / 2.
+	return act_k * action + act_b
+
+
+def trans_net_action(action):
+	act_k_inv = 2. / (10 - (-10))
+	act_b = (10 + (-10)) / 2.
+	return act_k_inv * (action - act_b)
+
 # use this to plot Ornstein Uhlenbeck random motion
 if __name__ == '__main__':
 	ou = OrnsteinUhlenbeckActionNoise(1)

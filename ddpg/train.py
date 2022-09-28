@@ -11,6 +11,7 @@ sys.path.append('..')
 from uav_env import UavEnvironment
 import ddpg
 import buffer
+import utils
 
 MAX_EPISODES = 5000
 MAX_STEPS = 200
@@ -41,6 +42,7 @@ for _ep in range(MAX_EPISODES):
 	for r in range(MAX_STEPS):
 		observation = np.float32(np.array(observation, dtype=object).flatten())
 		action = trainer.get_exploration_action(observation)
+		action = utils.trans_env_action(action)
 		act = np.array(action).reshape((len(action)//env.action_space.dim, env.action_space.dim))
 		new_observation, reward, done, _ = env.step(act)
 		new_observation = np.float32(np.array(new_observation, dtype=object).flatten())
@@ -52,11 +54,11 @@ for _ep in range(MAX_EPISODES):
 		for d in done:
 			if d == 0:
 				gameover = False
+		action = utils.trans_net_action(action)
 		ram.add(observation, action, reward, new_observation)
 		# perform optimization
-		if _ep > 5:
-			trainer.optimize()
-		if _ep % 100 == 0 and r % 20 == 0 and env.is_render:
+		trainer.optimize()
+		if _ep % 20 == 0 and r % 20 == 0 and env.is_render:
 			filepath = '../img/' + str(_ep / 100) + '-' + str(r) + '.jpg'
 			print(filepath)
 			cv2.imwrite(filepath, env.render.image)

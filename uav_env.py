@@ -203,7 +203,10 @@ class UavEnvironment:
                         if img[y_top+j, x_left+i, 0] == 100 or img[y_top+j, x_left+i, 0] == 120:
                             uav.obs[j, i] = 1
                         uav.obs[j, i] = img[y_top+j, x_left+i, 0]/255.0
+            # cv2.imshow("s", uav.obs)
+            # cv2.waitKey(0)
             uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
+
         return [uav.obs for uav in self.uavs]
 
 
