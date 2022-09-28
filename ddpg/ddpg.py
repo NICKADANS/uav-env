@@ -32,7 +32,7 @@ class Trainer:
 		self.ram = ram
 		self.iter = 0
 		self.noise = utils.OrnsteinUhlenbeckActionNoise(self.action_dim)
-
+		self.var = 1
 		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),LEARNING_RATE)
@@ -63,6 +63,7 @@ class Trainer:
 		state = Variable(torch.from_numpy(state))
 		action = self.actor.forward(state).detach()
 		new_action = action.data.numpy() + (self.noise.sample() * self.action_lim)
+		# new_action = action.data.numpy() + (np.random.randn(self.action_dim) * self.action_lim * self.var)
 		new_action = np.clip(new_action, -10.0, 10.0)
 		return new_action
 
@@ -97,7 +98,6 @@ class Trainer:
 		self.actor_optimizer.zero_grad()
 		loss_actor.backward()
 		self.actor_optimizer.step()
-
 		utils.soft_update(self.target_actor, self.actor, TAU)
 		utils.soft_update(self.target_critic, self.critic, TAU)
 

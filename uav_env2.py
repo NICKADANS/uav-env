@@ -156,7 +156,7 @@ class UavEnvironment:
                 radius = uav.v_max
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward = 1
+                        reward = 10
                         poi.done = 1
                         # 绘制poi
                         if self.is_render:
@@ -166,7 +166,7 @@ class UavEnvironment:
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
                     if (obstacle[0] - new_x)**2 + (obstacle[1] - new_y)**2 <= radius**2:
-                        reward = -10
+                        reward = -100
                         uav.energy = 0
                         break
                 # 更新该无人机的位置
@@ -175,7 +175,7 @@ class UavEnvironment:
 
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -10
+                reward = -100
                 uav.energy = 0
                 # 更新该无人机的位置
                 if new_x < 0:
@@ -210,19 +210,19 @@ class UavEnvironment:
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
                         if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                            reward = 1
+                            reward = 10
                             break
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
                         if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
-                            reward = -10
+                            reward = -100
                             uav.energy = 0
                             break
                     # pass
                 # 如果无人机位于界外
                 else:
-                    reward = -10
+                    reward = -100
             total_reward += reward
         return total_reward
 
@@ -243,7 +243,8 @@ class UavEnvironment:
             for u in self.uavs:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
                 i += 1
-
+        for o in uav.obs:
+            o /= 1000.0
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
