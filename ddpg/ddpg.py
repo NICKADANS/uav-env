@@ -63,6 +63,7 @@ class Trainer:
 		state = Variable(torch.from_numpy(state))
 		action = self.actor.forward(state).detach()
 		new_action = action.data.numpy() + (self.noise.sample() * self.action_lim)
+		new_action = np.clip(new_action, -10.0, 10.0)
 		return new_action
 
 	def optimize(self):

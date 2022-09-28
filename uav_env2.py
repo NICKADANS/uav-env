@@ -244,9 +244,6 @@ class UavEnvironment:
                 uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
                 i += 1
 
-            for o in uav.obs:
-                o /= 1000.0
-
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
