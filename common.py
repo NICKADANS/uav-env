@@ -9,14 +9,16 @@ import numpy as np
 # 图像的默认宽高
 DEFAULT_HEIGHT = 1000
 DEFAULT_WIDTH = 1000
-# 兴趣点被采集后的颜色BGR
+# 表示兴趣点需要采集的颜色BGR
 POI_COLOR_GATHER = (240, 120, 60)
-# 兴趣点被完整采集后的颜色BGR
+# 表示兴趣点被完整采集的颜色BGR
 POI_COLOR_OVER = (120, 240, 60)
 # 障碍物的颜色BGR
 OBS_COLOR = (150, 150, 150)
 OBS_RADIUS = 15
 # 白色BGR
 WHITE_COLOR = (255, 255, 255)
+# 黑色BGR
+BLACK_COLOR = (0, 0, 0)
 # 飞机颜色BGR
 UAV_COLOR = [(100, 150, 250), (100, 150, 150), (100, 75, 125), (100, 75, 75), (100, 150, 0)]

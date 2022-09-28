@@ -8,7 +8,7 @@ import os
 import gc
 import sys
 sys.path.append('..')
-from uav_env2 import UavEnvironment
+from uav_env import UavEnvironment
 import ddpg
 import buffer
 
