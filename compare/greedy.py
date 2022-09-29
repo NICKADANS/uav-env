@@ -47,5 +47,4 @@ def select_actions(env):
         dx = np.float(dx)
         dy = np.float(dy)
         actions.append([dx, dy])
-    actions = torch.Tensor(actions)
     return actions

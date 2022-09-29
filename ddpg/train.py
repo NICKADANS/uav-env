@@ -12,6 +12,7 @@ from uav_env import UavEnvironment
 import ddpg
 import buffer
 import utils
+from compare import greedy
 
 MAX_EPISODES = 5000
 MAX_STEPS = 200
@@ -41,9 +42,14 @@ for _ep in range(MAX_EPISODES):
 	total_reward = 0.0
 	for r in range(MAX_STEPS):
 		observation = np.float32(np.array(observation, dtype=object).flatten())
-		action = trainer.get_exploration_action(observation)
+		action = trainer.get_exploitation_action(observation)
 		action = utils.trans_env_action(action)
-		act = np.array(action).reshape((len(action)//env.action_space.dim, env.action_space.dim))
+		act = np.array(action).reshape((len(action) // env.action_space.dim, env.action_space.dim))
+		greedy_action = greedy.select_actions(env)
+		if env.cal_reward(greedy_action) >= env.cal_reward(act):
+			act = greedy_action
+			action = np.float32(np.array(act, dtype=object).flatten())
+
 		new_observation, reward, done, _ = env.step(act)
 		new_observation = np.float32(np.array(new_observation, dtype=object).flatten())
 		reward = reward[0]
@@ -70,5 +76,5 @@ for _ep in range(MAX_EPISODES):
 	# check memory consumption and clear memory
 	gc.collect()
 
-	if _ep % 100 == 0:
+	if _ep % 50 == 0:
 		trainer.save_models(_ep)

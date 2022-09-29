@@ -151,14 +151,13 @@ class UavEnvironment:
                 # 计算奖励
                 reward = -0.01
                 # 判断是否采集了某个兴趣点
-                radius = uav.v_max
+                radius = 20
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward = 10
+                        reward += 50
                         poi.done = 1
                         # 绘制poi
                         self.render.draw_poi(poi)
-                        break
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
@@ -188,6 +187,39 @@ class UavEnvironment:
         # 渲染无人机的新位置
         self.render.draw_uav(uav)
         return uav.obs, action, reward, None
+
+    # 估计执行一步action所得的奖励
+    def cal_reward(self, action):
+        total_reward = 0
+        for i, uav in enumerate(self.uavs):
+            # 没电执行下一步动作
+            if uav.energy < uav.cal_energy_loss(action):
+                reward = 0
+            else:
+                new_x = uav.x + action[i][0]
+                new_y = uav.y + action[i][1]
+                # 如果无人机下一步位于界内
+                if 0 <= new_x < 1000 and 0 <= new_y < 1000:
+                    # 如果无人机什么都没做
+                    reward = -1
+                    radius = uav.v_max
+                    # 如果无人机在采集兴趣点
+                    for poi in self.pois:
+                        if (poi.x - new_x) ** 2 + (poi.y - new_y) ** 2 <= radius ** 2 and poi.done == 0:
+                            reward = 10
+                            break
+                    # 如果无人机撞到障碍物
+                    radius = common.OBS_RADIUS
+                    for obstacle in self.obstacles:
+                        if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
+                            reward = -100
+                            break
+                    # pass
+                # 如果无人机位于界外
+                else:
+                    reward = -100
+            total_reward += reward
+        return total_reward
 
     # 计算环境归一化后的观测值
     def cal_env_obs(self):
@@ -225,7 +257,7 @@ if __name__ == "__main__":
             # '''
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
-            actions = random.select_actions(env)
+            actions = greedy.select_actions(env)
             obs, rewards, dones, _ = env.step(actions)
             # print(obs)
             # 判断游戏是否结束

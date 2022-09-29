@@ -10,10 +10,10 @@ import math
 import utils
 import model
 
-BATCH_SIZE = 256
-LEARNING_RATE = 0.001
+BATCH_SIZE = 16
+LEARNING_RATE = 0.0001
 GAMMA = 0.95
-TAU = 0.01
+TAU = 0.005
 
 
 class Trainer:
@@ -35,11 +35,11 @@ class Trainer:
 		self.var = 1
 		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.actor_optimizer = torch.optim.SGD(self.actor.parameters(),0.0001)
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), LEARNING_RATE)
 
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.SGD(self.critic.parameters(),0.001)
+		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), 0.0001)
 
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -72,18 +72,19 @@ class Trainer:
 		Samples a random batch from replay memory and performs optimization
 		:return:
 		"""
-		s1,a1,r1,s2 = self.ram.sample(BATCH_SIZE)
+		s1, a1, r1, s2 = self.ram.sample(BATCH_SIZE)
 
 		s1 = Variable(torch.from_numpy(s1))
 		a1 = Variable(torch.from_numpy(a1))
 		r1 = Variable(torch.from_numpy(r1))
 		s2 = Variable(torch.from_numpy(s2))
+
 		# ---------------------- optimize critic ----------------------
 		# Use target actor exploitation policy here for loss evaluation
 		a2 = self.target_actor.forward(s2).detach()
 		next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
-		# y_exp = r + gamma*Q'( s2, pi'(s2))
-		y_expected = r1 * 0.01 + GAMMA * next_val
+		# y_exp = r + gamma * Q'( s2, pi'(s2))
+		y_expected = r1 + GAMMA * next_val
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
 		# compute critic loss, and update the critic
