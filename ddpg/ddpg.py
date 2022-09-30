@@ -10,9 +10,9 @@ import math
 import utils
 import model
 
-BATCH_SIZE = 256
+BATCH_SIZE = 16
 LEARNING_RATE = 0.0001
-GAMMA = 0.95
+GAMMA = 0.99
 TAU = 0.001
 
 
@@ -35,11 +35,11 @@ class Trainer:
 		self.var = 1
 		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), LEARNING_RATE)
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), 0.0001)
 
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), LEARNING_RATE)
+		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), 0.001)
 
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -62,9 +62,11 @@ class Trainer:
 		"""
 		state = Variable(torch.FloatTensor(state))
 		action = self.actor.forward(state).detach()
-		new_action = action.data.numpy() + self.noise.sample()
-		# new_action = action.data.numpy() + (np.random.randn(self.action_dim) * self.action_lim * self.var)
+
+		# new_action = action.data.numpy() + self.noise.sample()
+		new_action = (1 - self.var) * action.data.numpy() + self.noise.sample() * self.var
 		new_action = np.clip(new_action, -1, 1)
+		# print(action, new_action, self.var)
 		return new_action
 
 	def optimize(self):
@@ -73,7 +75,6 @@ class Trainer:
 		:return:
 		"""
 		s1, a1, r1, s2 = self.ram.sample(BATCH_SIZE)
-
 		s1 = Variable(torch.from_numpy(s1))
 		a1 = Variable(torch.from_numpy(a1))
 		r1 = Variable(torch.from_numpy(r1))
@@ -84,7 +85,7 @@ class Trainer:
 		a2 = self.target_actor.forward(s2).detach()
 		next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
 		# y_exp = r + gamma * Q'( s2, pi'(s2))
-		y_expected = r1 * 0.1 + GAMMA * next_val
+		y_expected = r1 + GAMMA * next_val
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
 		# compute critic loss, and update the critic
@@ -103,6 +104,7 @@ class Trainer:
 		utils.soft_update(self.target_actor, self.actor, TAU)
 		utils.soft_update(self.target_critic, self.critic, TAU)
 
+		# print('closs ', loss_critic, ', aloss', loss_actor)
 		# if self.iter % 100 == 0:
 		# 	print 'Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
 		# 		' Loss_critic :- ', loss_critic.data.numpy()

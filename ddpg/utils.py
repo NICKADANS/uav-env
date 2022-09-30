@@ -63,16 +63,14 @@ class OrnsteinUhlenbeckActionNoise:
 		return self.X
 
 
-def trans_env_action(action):
-	act_k = (10 - (-10)) / 2.
-	act_b = (10 + (-10)) / 2.
-	return act_k * action + act_b
+def trans_env_action(action, v_max):
+	act_k = v_max
+	return act_k * action
 
 
-def trans_net_action(action):
-	act_k_inv = 2. / (10 - (-10))
-	act_b = (10 + (-10)) / 2.
-	return act_k_inv * (action - act_b)
+def trans_net_action(action, v_max):
+	act_k_inv = 1. / v_max
+	return act_k_inv * action
 
 # 把OBS拼接成一张图像
 def concat_obs(obs):

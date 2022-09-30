@@ -11,10 +11,13 @@ class Actor(nn.Module):
         self.action_lim = action_lim
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=16, kernel_size=4, stride=2, padding=0),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU()
         )
         conv_out_size = self.get_conv_out(obs_shape)
@@ -42,10 +45,13 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=16, kernel_size=4, stride=2, padding=0),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU()
         )
         conv_out_size = self.get_conv_out(obs_shape)

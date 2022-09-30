@@ -48,9 +48,9 @@ class UavEnvRender:
     # 更新兴趣点状态
     def draw_poi(self, poi):
         if poi.done == 1:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_OVER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 4, common.POI_COLOR_OVER, -1)
         else:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 3, common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 4, common.POI_COLOR_GATHER, -1)
 
     # 绘制无人机
     def draw_uavs(self, uavs):
@@ -59,7 +59,7 @@ class UavEnvRender:
 
     # 更新无人机状态
     def draw_uav(self, uav):
-        cv2.circle(self.image, (int(uav.x), int(uav.y)), 3, uav.color, -1)
+        cv2.circle(self.image, (int(uav.x), int(uav.y)), 4, uav.color, -1)
 
     # 绘制障碍物
     def draw_obs(self, obstacles):
@@ -151,10 +151,10 @@ class UavEnvironment:
                 # 计算奖励
                 reward = -0.01
                 # 判断是否采集了某个兴趣点
-                radius = 20
+                radius = 30
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward += 50
+                        reward += 5
                         poi.done = 1
                         # 绘制poi
                         self.render.draw_poi(poi)
@@ -162,7 +162,7 @@ class UavEnvironment:
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
                     if (obstacle[0] - new_x)**2 + (obstacle[1] - new_y)**2 <= radius**2:
-                        reward = -100
+                        reward = -10
                         uav.energy = 0
                         break
                 # 更新该无人机的位置
@@ -171,7 +171,7 @@ class UavEnvironment:
 
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -100
+                reward = -10
                 uav.energy = 0
                 # 更新该无人机的位置
                 if new_x < 0:
@@ -201,8 +201,8 @@ class UavEnvironment:
                 # 如果无人机下一步位于界内
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
                     # 如果无人机什么都没做
-                    reward = -0.01
-                    radius = 20
+                    reward = -1
+                    radius = 30
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
                         if (poi.x - new_x) ** 2 + (poi.y - new_y) ** 2 <= radius ** 2 and poi.done == 0:
@@ -216,7 +216,7 @@ class UavEnvironment:
                     # pass
                 # 如果无人机位于界外
                 else:
-                    reward = -100
+                    reward = -1
             total_reward += reward
         return total_reward
 
@@ -231,11 +231,12 @@ class UavEnvironment:
             for i in range(0, uav.view_range):
                 for j in range(0, uav.view_range):
                     if 0 <= x_left + i < 1000 and 0 <= y_top + j < 1000:
-                        if img[y_top+j, x_left+i, 0] == 100 or img[y_top+j, x_left+i, 0] == 120:
+                        if img[y_top+j, x_left+i, 0] == 100:
                             uav.obs[j, i] = (1.0, 1.0, 1.0)
-                        uav.obs[j, i] = img[y_top+j, x_left+i]/255.0
-            # cv2.imshow("s", uav.obs)
-            # cv2.waitKey(0)
+                        else:
+                            uav.obs[j, i] = img[y_top + j, x_left + i] / 255.0
+            cv2.imshow("s", uav.obs)
+            cv2.waitKey(0)
             # uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
             uav.obs = np.transpose(uav.obs, (2, 0, 1))
         return np.array([uav.obs for uav in self.uavs])
