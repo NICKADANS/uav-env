@@ -35,7 +35,7 @@ print(' Action Max :- ', A_MAX)
 
 ram = buffer.MemoryBuffer(MAX_BUFFER)
 trainer = ddpg.Trainer(S_DIM, A_DIM, A_MAX, ram)
-trainer.load_models(2700)
+trainer.load_models(20)
 avg_reward = 0.0
 
 for _ep in range(MAX_EPISODES):

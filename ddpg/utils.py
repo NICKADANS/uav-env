@@ -74,6 +74,15 @@ def trans_net_action(action):
 	act_b = (10 + (-10)) / 2.
 	return act_k_inv * (action - act_b)
 
+# 把OBS拼接成一张图像
+def concat_obs(obs):
+	if len(obs) == 0:
+		return np.array([])
+	obs0 = obs[0]
+	for i in range(1, len(obs)):
+		obs0 = np.concatenate((obs0, obs[i]), axis=1)
+	return np.array(obs0)
+
 # use this to plot Ornstein Uhlenbeck random motion
 if __name__ == '__main__':
 	ou = OrnsteinUhlenbeckActionNoise(1)

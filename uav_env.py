@@ -71,7 +71,7 @@ class UavEnvRender:
 class ObservationSpace:
     def __init__(self, uavs):
         # 状态空间维度
-        self.dim = uavs[0].view_range * uavs[0].view_range
+        self.dim = (3, uavs[0].view_range, uavs[0].view_range)
 
 
 # 对于每个Agent的行为空间
@@ -201,13 +201,12 @@ class UavEnvironment:
                 # 如果无人机下一步位于界内
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
                     # 如果无人机什么都没做
-                    reward = -1
-                    radius = uav.v_max
+                    reward = -0.01
+                    radius = 20
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
                         if (poi.x - new_x) ** 2 + (poi.y - new_y) ** 2 <= radius ** 2 and poi.done == 0:
-                            reward = 10
-                            break
+                            reward += 50
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
@@ -225,28 +224,28 @@ class UavEnvironment:
     def cal_env_obs(self):
         img = self.render.image
         for uav in self.uavs:
-            uav.obs = np.zeros((uav.view_range, uav.view_range), dtype=np.float)
+            uav.obs = np.zeros((uav.view_range, uav.view_range, 3), dtype=np.float)
             # 观测区域：一个 view_range * view_range 的正方形区域
-            x_left = int(uav.x - uav.v_max)
-            y_top = int(uav.y - uav.v_max)
+            x_left = int(uav.x - uav.view_range//2)
+            y_top = int(uav.y - uav.view_range//2)
             for i in range(0, uav.view_range):
                 for j in range(0, uav.view_range):
                     if 0 <= x_left + i < 1000 and 0 <= y_top + j < 1000:
                         if img[y_top+j, x_left+i, 0] == 100 or img[y_top+j, x_left+i, 0] == 120:
-                            uav.obs[j, i] = 1
-                        uav.obs[j, i] = img[y_top+j, x_left+i, 0]/255.0
+                            uav.obs[j, i] = (1.0, 1.0, 1.0)
+                        uav.obs[j, i] = img[y_top+j, x_left+i]/255.0
             # cv2.imshow("s", uav.obs)
             # cv2.waitKey(0)
-            uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
-
-        return [uav.obs for uav in self.uavs]
+            # uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
+            uav.obs = np.transpose(uav.obs, (2, 0, 1))
+        return np.array([uav.obs for uav in self.uavs])
 
 
 if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = [[650, 650], [300, 400]]
-    env = UavEnvironment(pois, obstacles, 1)
+    env = UavEnvironment(pois, obstacles, 2)
     for i in range(0, 100):
         env.reset()
         gameover = False

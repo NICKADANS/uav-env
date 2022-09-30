@@ -10,10 +10,10 @@ import math
 import utils
 import model
 
-BATCH_SIZE = 16
+BATCH_SIZE = 256
 LEARNING_RATE = 0.0001
 GAMMA = 0.95
-TAU = 0.005
+TAU = 0.001
 
 
 class Trainer:
@@ -39,7 +39,7 @@ class Trainer:
 
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), 0.0001)
+		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), LEARNING_RATE)
 
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -60,7 +60,7 @@ class Trainer:
 		:param state: state (Numpy array)
 		:return: sampled action (Numpy array)
 		"""
-		state = Variable(torch.from_numpy(state))
+		state = Variable(torch.FloatTensor(state))
 		action = self.actor.forward(state).detach()
 		new_action = action.data.numpy() + self.noise.sample()
 		# new_action = action.data.numpy() + (np.random.randn(self.action_dim) * self.action_lim * self.var)
@@ -84,7 +84,7 @@ class Trainer:
 		a2 = self.target_actor.forward(s2).detach()
 		next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
 		# y_exp = r + gamma * Q'( s2, pi'(s2))
-		y_expected = r1 + GAMMA * next_val
+		y_expected = r1 * 0.1 + GAMMA * next_val
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
 		# compute critic loss, and update the critic

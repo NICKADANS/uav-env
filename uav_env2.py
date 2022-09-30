@@ -108,8 +108,7 @@ class UavEnvironment:
         for uav in self.uavs:
             uav.reset()
         # 重置渲染
-        if self.is_render:
-            self.render.reset()
+        self.render.reset()
         return self.cal_env_obs()
 
     # 执行行为
@@ -153,15 +152,13 @@ class UavEnvironment:
                 # 计算奖励
                 reward = -0.01
                 # 判断是否采集了某个兴趣点
-                radius = uav.v_max
+                radius = 20
                 for poi in self.pois:
                     if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward = 10
+                        reward += 50
                         poi.done = 1
                         # 绘制poi
-                        if self.is_render:
-                            self.render.draw_poi(poi)
-                        break
+                        self.render.draw_poi(poi)
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
@@ -206,18 +203,16 @@ class UavEnvironment:
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
                     # 如果无人机什么都没做
                     reward = -0.01
-                    radius = uav.v_max
+                    radius = 20
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
-                        if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                            reward = 10
-                            break
+                        if (poi.x - new_x) ** 2 + (poi.y - new_y) ** 2 <= radius ** 2 and poi.done == 0:
+                            reward += 50
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
                         if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
                             reward = -100
-                            uav.energy = 0
                             break
                     # pass
                 # 如果无人机位于界外
@@ -233,25 +228,21 @@ class UavEnvironment:
             # 更新PoI的观测值
             i = 0
             for p in self.pois:
-                uav.obs[i] = np.sqrt((uav.x - p.x)**2 + (uav.y - p.y)**2)
+                uav.obs[i] = int(np.sqrt((uav.x - p.x)**2 + (uav.y - p.y)**2)) if p.done == 0 else -1
                 i += 1
             # 更新障碍物的观测值
-            for obs in self.obstacles:
-                np.sqrt((uav.x - obs[0])**2 + (uav.y - obs[1])**2)
-                i += 1
+
             # 更新无人机的观测值
             for u in self.uavs:
-                uav.obs[i] = np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2)
+                uav.obs[i] = int(np.sqrt((uav.x - u.x)**2 + (uav.y - u.y)**2))
                 i += 1
-        for o in uav.obs:
-            o /= 1000.0
         return [uav.obs for uav in self.uavs]
 
 if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = [[650, 650], [300, 400]]
-    env = UavEnvironment(pois, obstacles, 3)
+    env = UavEnvironment(pois, obstacles, 1)
     for i in range(0, 100):
         env.reset()
         gameover = False
@@ -263,7 +254,8 @@ if __name__ == "__main__":
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
             actions = greedy.select_actions(env)
-            obs, rewards, dones, _ = env.step(actions.numpy())
+            obs, rewards, dones, _ = env.step(actions)
+            # print(obs)
             # 判断游戏是否结束
             gameover = True
             for d in dones:
