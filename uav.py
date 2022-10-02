@@ -17,7 +17,7 @@ class UAV:
         # 电量信息
         self.energy = 1  # 当前电量
         # 观测值
-        self.view_range = 128  # 视野范围
+        self.view_range = 101  # 视野范围
         self.obs = []
         # 无人机颜色
         self.color = color

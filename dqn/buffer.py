@@ -17,8 +17,7 @@ class ExperienceBuffer:
         self.buffer.append(experience)
 
     def sample(self, batch_size):
-        indices = np.random.choice(len(self.buffer), batch_size,
-                                   replace=False)
+        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
         states, actions, rewards, dones, next_states = \
             zip(*[self.buffer[idx] for idx in indices])
-        return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), np.array(dones), np.array(next_states)
+        return np.array(states, dtype=np.float32), np.array(actions), np.array(rewards, dtype=np.float32), np.array(dones), np.array(next_states, dtype=np.float32)

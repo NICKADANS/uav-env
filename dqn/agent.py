@@ -39,11 +39,12 @@ class Agent:
         # do step in the environment
         new_state, reward, is_done, _ = self.env.step([action])
         self.total_reward += reward[0]
-
         exp = Experience(self.state, action, reward[0], is_done[0], new_state[0])
         self.exp_buffer.append(exp)
         self.state = new_state[0]
         if is_done[0] == 1:
+            # cv2.imshow("e", self.env.render.image)
+            # cv2.waitKey(0)
             done_reward = self.total_reward
             self._reset()
-        return done_reward, is_done
+        return done_reward, is_done[0]

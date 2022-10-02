@@ -79,7 +79,7 @@ class ActionSpace:
     def __init__(self, uavs):
         # 行为空间维度
         self.n = 5  # 无人机的速度
-        self.actions = [(-10, 0), (10, 0), (0, 0), (0, 10), (0, -10)]
+        self.actions = [(-20, 0), (20, 0), (0, 0), (0, 20), (0, -20)]
 
     def sample(self):
         indices = np.random.choice(len(self.actions))
@@ -168,7 +168,7 @@ class UavEnvironment:
                             mindis = 0
                             # 绘制poi
                             self.render.draw_poi(poi)
-                reward -= mindis * 0.01
+                reward -= mindis * 0.001
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
@@ -219,7 +219,7 @@ class UavEnvironment:
                         if dis <= radius:
                             reward += 5
                             mindis = 0
-                    reward -= mindis * 0.01
+                    reward -= mindis * 0.001
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
