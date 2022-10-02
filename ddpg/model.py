@@ -1,3 +1,6 @@
+from copy import deepcopy
+
+import cv2
 import numpy as np
 
 import torch
@@ -22,11 +25,11 @@ class Actor(nn.Module):
         )
         conv_out_size = self.get_conv_out(obs_shape)
         self.fc = nn.Sequential(
-            nn.Linear(conv_out_size, 1024),
+            nn.Linear(conv_out_size, 800),
             nn.ReLU(),
-            nn.Linear(1024, 512),
+            nn.Linear(800, 500),
             nn.ReLU(),
-            nn.Linear(512, act_size),
+            nn.Linear(500, act_size),
             nn.Tanh()
         )
 
@@ -56,13 +59,13 @@ class Critic(nn.Module):
         )
         conv_out_size = self.get_conv_out(obs_shape)
         self.fc1 = nn.Sequential(
-            nn.Linear(conv_out_size, 1024),
+            nn.Linear(conv_out_size, 800),
             nn.ReLU()
         )
         self.fc2 = nn.Sequential(
-           nn.Linear(1024 + act_size, 512),
+           nn.Linear(800 + act_size, 500),
            nn.ReLU(),
-           nn.Linear(512, 1)
+           nn.Linear(500, 1)
         )
 
     def get_conv_out(self, shape):

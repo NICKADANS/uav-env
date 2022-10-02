@@ -48,9 +48,9 @@ class UavEnvRender:
     # 更新兴趣点状态
     def draw_poi(self, poi):
         if poi.done == 1:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 4, common.POI_COLOR_OVER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_OVER, -1)
         else:
-            cv2.circle(self.image, (int(poi.x), int(poi.y)), 4, common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_GATHER, -1)
 
     # 绘制无人机
     def draw_uavs(self, uavs):
@@ -138,6 +138,8 @@ class UavEnvironment:
 
     # 为环境里的单个无人机执行行为
     def _step(self, uav, action):
+        # 渲染无人机的新位置
+        self.render.draw_uav(uav)
         reward = 0
         # 判断是否有电执行下一步动作
         if uav.energy >= uav.cal_energy_loss(action):
@@ -148,21 +150,25 @@ class UavEnvironment:
             new_y = uav.y + action[1]
             # 判断无人机执行行为后的状态，并计算奖励
             if 0 <= new_x < 1000 and 0 <= new_y < 1000:  # 无人机位于界内
-                # 计算奖励
-                reward = -0.01
                 # 判断是否采集了某个兴趣点
-                radius = 30
+                radius = 20
+                mindis = 2000
                 for poi in self.pois:
-                    if (poi.x - new_x)**2 + (poi.y - new_y)**2 <= radius**2 and poi.done == 0:
-                        reward += 5
-                        poi.done = 1
-                        # 绘制poi
-                        self.render.draw_poi(poi)
+                    if poi.done == 0:
+                        dis = np.sqrt((poi.x - new_x)**2 + (poi.y - new_y)**2)
+                        mindis = dis if dis < mindis else mindis
+                        if dis <= radius :
+                            reward += 5
+                            poi.done = 1
+                            mindis = 0
+                            # 绘制poi
+                            self.render.draw_poi(poi)
+                reward -= mindis * 0.01
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
                     if (obstacle[0] - new_x)**2 + (obstacle[1] - new_y)**2 <= radius**2:
-                        reward = -10
+                        reward -= 100
                         uav.energy = 0
                         break
                 # 更新该无人机的位置
@@ -171,7 +177,7 @@ class UavEnvironment:
 
             else:  # 无人机位于界外
                 # 计算奖励
-                reward = -10
+                reward -= 100
                 uav.energy = 0
                 # 更新该无人机的位置
                 if new_x < 0:
@@ -184,8 +190,6 @@ class UavEnvironment:
                     uav.y = 999
         else:  # 没电执行下一步动作
             uav.energy = 0
-        # 渲染无人机的新位置
-        self.render.draw_uav(uav)
         return uav.obs, action, reward, None
 
     # 估计执行一步action所得的奖励
@@ -193,30 +197,34 @@ class UavEnvironment:
         total_reward = 0
         for i, uav in enumerate(self.uavs):
             # 没电执行下一步动作
-            if uav.energy < uav.cal_energy_loss(action):
-                reward = 0
-            else:
+            reward = 0
+            if uav.energy >= uav.cal_energy_loss(action):
                 new_x = uav.x + action[i][0]
                 new_y = uav.y + action[i][1]
                 # 如果无人机下一步位于界内
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
                     # 如果无人机什么都没做
-                    reward = -1
-                    radius = 30
+                    reward = 0
+                    mindis = 2000
+                    radius = 20
                     # 如果无人机在采集兴趣点
                     for poi in self.pois:
-                        if (poi.x - new_x) ** 2 + (poi.y - new_y) ** 2 <= radius ** 2 and poi.done == 0:
-                            reward += 50
+                        dis = np.sqrt((poi.x - new_x) ** 2 + (poi.y - new_y) ** 2)
+                        mindis = dis if dis < mindis else mindis
+                        if dis <= radius:
+                            reward += 5
+                            mindis = 0
+                    reward -= mindis * 0.01
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
                         if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
-                            reward = -100
+                            reward -= 100
                             break
                     # pass
                 # 如果无人机位于界外
                 else:
-                    reward = -1
+                    reward -= 100
             total_reward += reward
         return total_reward
 
@@ -235,9 +243,11 @@ class UavEnvironment:
                             uav.obs[j, i] = (1.0, 1.0, 1.0)
                         else:
                             uav.obs[j, i] = img[y_top + j, x_left + i] / 255.0
-            cv2.imshow("s", uav.obs)
-            cv2.waitKey(0)
+            # cv2.imshow("s", uav.obs)
+            # cv2.waitKey(0)
             # uav.obs = np.reshape(uav.obs, (uav.view_range**2, ))
+
+            uav.obs = (uav.obs - 0.5) / 0.5  # 正则化图像
             uav.obs = np.transpose(uav.obs, (2, 0, 1))
         return np.array([uav.obs for uav in self.uavs])
 

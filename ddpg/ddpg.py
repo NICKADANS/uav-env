@@ -1,4 +1,6 @@
 from __future__ import division
+
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,11 +12,11 @@ import math
 import utils
 import model
 
-BATCH_SIZE = 16
-LEARNING_RATE = 0.0001
-GAMMA = 0.99
-TAU = 0.001
-
+BATCH_SIZE = 128
+LEARNING_RATE = 0.001
+GAMMA = 0.95
+TAU = 0.01
+UPDATE_EVERY = 4
 
 class Trainer:
 
@@ -31,16 +33,15 @@ class Trainer:
 		self.action_lim = action_lim
 		self.ram = ram
 		self.iter = 0
-		self.noise = utils.OrnsteinUhlenbeckActionNoise(self.action_dim)
+		# self.noise = utils.OrnsteinUhlenbeckActionNoise(self.action_dim)
+		self.noise = utils.OUNoise(self.action_dim)
 		self.var = 1
 		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), 0.0001)
-
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=LEARNING_RATE)
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), 0.001)
-
+		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 
@@ -62,11 +63,12 @@ class Trainer:
 		"""
 		state = Variable(torch.FloatTensor(state))
 		action = self.actor.forward(state).detach()
+		# new_action = action.data.numpy() + np.random.randn(self.action_dim) * self.var
 
-		# new_action = action.data.numpy() + self.noise.sample()
-		new_action = (1 - self.var) * action.data.numpy() + self.noise.sample() * self.var
+		new_action = action.data.numpy() + self.noise.noise() * self.var
+		# new_action = (1 - self.var) * action.data.numpy() + (2 * np.random.random(self.action_dim) - 1) * self.var
 		new_action = np.clip(new_action, -1, 1)
-		# print(action, new_action, self.var)
+		print(action, new_action, self.var)
 		return new_action
 
 	def optimize(self):
@@ -79,6 +81,10 @@ class Trainer:
 		a1 = Variable(torch.from_numpy(a1))
 		r1 = Variable(torch.from_numpy(r1))
 		s2 = Variable(torch.from_numpy(s2))
+		# print(a1, r1)
+		# for s in s1:
+		# 	cv2.imshow("s", np.transpose(s.numpy(), (1, 2, 0)))
+		# 	cv2.waitKey(0)
 
 		# ---------------------- optimize critic ----------------------
 		# Use target actor exploitation policy here for loss evaluation
@@ -101,10 +107,11 @@ class Trainer:
 		self.actor_optimizer.zero_grad()
 		loss_actor.backward()
 		self.actor_optimizer.step()
+
 		utils.soft_update(self.target_actor, self.actor, TAU)
 		utils.soft_update(self.target_critic, self.critic, TAU)
 
-		# print('closs ', loss_critic, ', aloss', loss_actor)
+		print('closs ', loss_critic, ', aloss', loss_actor)
 		# if self.iter % 100 == 0:
 		# 	print 'Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
 		# 		' Loss_critic :- ', loss_critic.data.numpy()

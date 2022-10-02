@@ -44,8 +44,11 @@ for _ep in range(MAX_EPISODES):
 	for r in range(MAX_STEPS):
 		action = trainer.get_exploration_action([observation])
 		action = utils.trans_env_action(action[0], A_MAX)
-		act = np.array(action).reshape((len(action) // env.action_space.dim, env.action_space.dim))
 
+
+		act = np.array(action).reshape((len(action) // env.action_space.dim, env.action_space.dim))
+		# cv2.imshow("s", np.transpose(observation, (1, 2, 0)))
+		# cv2.waitKey(0)
 		new_observation, reward, done, _ = env.step(act)
 		# print(env.uavs[0].x, env.uavs[0].y, new_observation[0])
 		new_observation = utils.concat_obs(new_observation)
@@ -73,5 +76,5 @@ for _ep in range(MAX_EPISODES):
 	# check memory consumption and clear memory
 	gc.collect()
 
-	if _ep % 20 == 0:
+	if _ep % 100 == 0:
 		trainer.save_models(_ep)

@@ -6,7 +6,7 @@ from copy import deepcopy
 import numpy as np
 
 class UAV:
-    def __init__(self, x=500, y=500, v_max=50, color=(np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))):
+    def __init__(self, x=500, y=500, v_max=20, color=(np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))):
         # 位置信息
         self.init_x = deepcopy(x)  # 初始横坐标位置
         self.init_y = deepcopy(y)  # 初始纵坐标位置
@@ -17,7 +17,7 @@ class UAV:
         # 电量信息
         self.energy = 1  # 当前电量
         # 观测值
-        self.view_range = 101  # 视野范围
+        self.view_range = 100  # 视野范围
         self.obs = []
         # 无人机颜色
         self.color = color
