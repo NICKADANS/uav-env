@@ -53,8 +53,11 @@ class DeepQTable:
         return actions
 
     @torch.no_grad()
-    def play_step(self, epsilon=0.0):
+    def play_step(self, epsilon=0.0, render=False):
         actions = self.select_actions(self.state, epsilon)
+        if render is True:
+            cv2.imshow("env", self.env.render.image)
+            cv2.waitKey(0)
         # do step in the environment
         new_obs, reward, dones, _ = self.env.step(actions)
         for i in range(self.n_agents):
@@ -98,3 +101,12 @@ class DeepQTable:
     def hard_update(self):
         for i in range(self.n_agents):
             self.tgt_nets[i].load_state_dict(self.nets[i].state_dict())
+
+    def save_models(self, reward):
+        for i in range(self.n_agents):
+            torch.save(self.nets[i], './models/' + str(reward) + '_' + str(i) + '.pt')
+
+    def load_models(self, reward):
+        for i in range(self.n_agents):
+            self.nets[i].load_state_dict(torch.load('./models/' + str(reward) + '_' + str(i) + '.pt', map_location=torch.device('cpu')).cpu().state_dict())
+        self.hard_update()

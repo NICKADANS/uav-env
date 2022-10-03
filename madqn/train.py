@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-from buffer import ExperienceBuffer
-from model import DQN
 import argparse
 import time
 import numpy as np
@@ -65,8 +62,8 @@ if __name__ == "__main__":
                 m_reward = np.mean(total_rewards[-100:])
                 print(
                     "%d: done %d games, reward %.3f, " "eps %.2f" % (frame_idx, len(total_rewards), m_reward, epsilon,))
-                if best_m_reward is None or best_m_reward < m_reward:
-                    # torch.save(net.state_dict(), "best_%.0f.dat" % m_reward)
+                if best_m_reward is None or int(best_m_reward + 2) < int(m_reward):
+                    dqn.save_models(int(m_reward))
                     if best_m_reward is not None:
                         print("Best reward updated %.3f -> %.3f" % (best_m_reward, m_reward))
                     best_m_reward = m_reward

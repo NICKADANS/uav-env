@@ -27,8 +27,9 @@ class UavEnvRender:
         self.uavs = deepcopy(uavs)
         self.init_pois = deepcopy(pois)
         self.init_uavs = deepcopy(uavs)
-
         self.obstacles = obstacles
+        # 生成一张图用于训练
+        self.train_image = deepcopy(self.image)
 
     # 重置图片
     def reset(self):
@@ -39,6 +40,7 @@ class UavEnvRender:
         self.draw_pois(self.pois)
         self.draw_uavs(self.uavs)
         self.draw_obs(self.obstacles)
+        self.train_image = deepcopy(self.image)
 
     # 绘制兴趣点
     def draw_pois(self, pois):
@@ -49,8 +51,10 @@ class UavEnvRender:
     def draw_poi(self, poi):
         if poi.done == 1:
             cv2.circle(self.image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_OVER, -1)
+            cv2.circle(self.train_image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_OVER, -1)
         else:
             cv2.circle(self.image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_GATHER, -1)
+            cv2.circle(self.train_image, (int(poi.x), int(poi.y)), 5, common.POI_COLOR_GATHER, -1)
 
     # 绘制无人机
     def draw_uavs(self, uavs):
@@ -66,6 +70,12 @@ class UavEnvRender:
         for obs in obstacles:
             cv2.circle(self.image, (int(obs[0]), int(obs[1])), common.OBS_RADIUS, common.OBS_COLOR, -1)
 
+    # 绘制当前训练图像
+    def draw_train_img(self, uavs):
+        img = deepcopy(self.train_image)
+        for uav in uavs:
+            cv2.circle(img, (int(uav.x), int(uav.y)), 4, uav.color, -1)
+        return img
 
 # 对于每个Agent的观测空间
 class ObservationSpace:
@@ -78,8 +88,8 @@ class ObservationSpace:
 class ActionSpace:
     def __init__(self, uavs):
         # 行为空间维度
-        self.n = 5  # 无人机的速度
-        self.actions = [(-20, 0), (20, 0), (0, 0), (0, 20), (0, -20)]
+        self.n = 9  # 无人机的速度
+        self.actions = [(-20, 0), (20, 0), (0, 0), (0, 20), (0, -20), (10, 10), (-10, 10), (10, -10), (-10, -10)]
 
     def sample(self):
         indices = np.random.choice(len(self.actions))
@@ -132,7 +142,7 @@ class UavEnvironment:
                 done_n.append(0)
             else:
                 done_n.append(1)
-        # 计算
+        # 计算新的观测值
         new_state_n = self.cal_env_obs()
         # 倘若共享奖励值
         reward = np.sum(reward_n)
@@ -169,6 +179,13 @@ class UavEnvironment:
                             # 绘制poi
                             self.render.draw_poi(poi)
                 reward -= mindis * 0.001
+                # 判断是否在其他无人机附近
+                radius = 2 * uav.v_max
+                reward += 10  # 新的位置在自身原来的位置附近
+                for uav in self.uavs:
+                    dis = np.sqrt((uav.x - new_x)**2 + (uav.y - new_y)**2)
+                    if dis <= radius:
+                        reward -= 10
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
@@ -220,13 +237,19 @@ class UavEnvironment:
                             reward += 5
                             mindis = 0
                     reward -= mindis * 0.001
+                    # 判断是否在其他无人机附近
+                    radius = 2 * uav.v_max
+                    reward += 10  # 新的位置在自身原来的位置附近
+                    for uav in self.uavs:
+                        dis = np.sqrt((uav.x - new_x) ** 2 + (uav.y - new_y) ** 2)
+                        if dis <= radius:
+                            reward -= 10
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
                         if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
                             reward -= 100
                             break
-                    # pass
                 # 如果无人机位于界外
                 else:
                     reward -= 100
@@ -235,7 +258,7 @@ class UavEnvironment:
 
     # 计算环境归一化后的观测值
     def cal_env_obs(self):
-        img = self.render.image
+        img = self.render.draw_train_img(self.uavs)
         for uav in self.uavs:
             uav.obs = np.zeros((uav.view_range, uav.view_range, 3), dtype=np.float)
             # 观测区域：一个 view_range * view_range 的正方形区域
@@ -244,10 +267,7 @@ class UavEnvironment:
             for i in range(0, uav.view_range):
                 for j in range(0, uav.view_range):
                     if 0 <= x_left + i < 1000 and 0 <= y_top + j < 1000:
-                        if img[y_top+j, x_left+i, 0] == 100:
-                            uav.obs[j, i] = (1.0, 1.0, 1.0)
-                        else:
-                            uav.obs[j, i] = img[y_top + j, x_left + i] / 255.0
+                        uav.obs[j, i] = img[y_top + j, x_left + i] / 255.0
             # cv2.imshow("s", uav.obs)
             # cv2.waitKey(0)
 
@@ -259,7 +279,8 @@ if __name__ == "__main__":
     pois = np.load("data/pois.npy", allow_pickle=True)
     # obstacles = np.load("data/obstacles.npy")
     obstacles = [[650, 650], [300, 400]]
-    env = UavEnvironment(pois, obstacles, 1)
+    n_agents = 2
+    env = UavEnvironment(pois, obstacles, n_agents)
     for i in range(0, 100):
         env.reset()
         gameover = False
@@ -270,8 +291,12 @@ if __name__ == "__main__":
             # '''
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
-            action = env.action_space.sample()
-            obs, rewards, dones, _ = env.step([action])
+            actions = []
+            for i in range(n_agents):
+                action = env.action_space.sample()
+                actions.append(action)
+            obs, rewards, dones, _ = env.step(actions)
+            print(rewards)
             # print(obs)
             # 判断游戏是否结束
             gameover = True
