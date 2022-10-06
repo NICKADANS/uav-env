@@ -57,6 +57,7 @@ class DeepQTable:
         actions = self.select_actions(self.state, epsilon)
         if render is True:
             cv2.imshow("env", self.env.render.image)
+            print(actions, self.env.uavs[0].energy)
             cv2.waitKey(0)
         # do step in the environment
         new_obs, reward, dones, _ = self.env.step(actions)
@@ -72,6 +73,8 @@ class DeepQTable:
                 break
         done_reward = None
         if gameover:
+            cv2.imshow("env", self.env.render.image)
+            cv2.waitKey(0)
             done_reward = self.total_reward
             self._reset()
         return done_reward, gameover

@@ -93,16 +93,25 @@ class ActionSpace:
 
     def sample(self):
         indices = np.random.choice(len(self.actions))
+        print(indices)
         return indices
 
 
 class UavEnvironment:
-    def __init__(self, pois, obstacles, uav_num):
+    def __init__(self, pois, obstacles, uav_num, uav_init_pos=[]):
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
         self.pois = deepcopy(pois)
         self.obstacles = obstacles
-        self.uavs = [UAV(color= common.UAV_COLOR[i]) for i in range(uav_num)]
+        if len(uav_init_pos) != uav_num:
+            self.uavs = [UAV(color=common.UAV_COLOR[i]) for i in range(uav_num)]
+        else:
+            self.uavs = [UAV(
+                x=uav_init_pos[i][0], y=uav_init_pos[i][1], color=common.UAV_COLOR[i]) for i in range(uav_num)
+            ]
         self.init_pois = deepcopy(pois)
+        # 系统收集的兴趣点个数
+        self.poi_done = 0
+
         # 初始化观测空间和行为空间，保存初始观测值
         self.obsvervation_space = ObservationSpace(self.uavs)
         self.action_space = ActionSpace(self.uavs)
@@ -114,10 +123,12 @@ class UavEnvironment:
         # 初始化环境
         self.reset()
 
+
     # 重置环境状态
     def reset(self):
         # 重置兴趣点和观测值
         self.pois = deepcopy(self.init_pois)
+        self.poi_done = 0
         # 重置每个无人机
         for uav in self.uavs:
             uav.reset()
@@ -175,17 +186,18 @@ class UavEnvironment:
                         if dis <= radius :
                             reward += 5
                             poi.done = 1
+                            self.poi_done += 1
                             mindis = 0
                             # 绘制poi
                             self.render.draw_poi(poi)
                 reward -= mindis * 0.001
-                # 判断是否在其他无人机附近
-                radius = 2 * uav.v_max
-                reward += 10  # 新的位置在自身原来的位置附近
-                for uav in self.uavs:
-                    dis = np.sqrt((uav.x - new_x)**2 + (uav.y - new_y)**2)
-                    if dis <= radius:
-                        reward -= 10
+                # # 判断是否在其他无人机附近
+                # radius = 2 * uav.v_max
+                # reward += 10  # 新的位置在自身原来的位置附近
+                # for uav in self.uavs:
+                #     dis = np.sqrt((uav.x - new_x)**2 + (uav.y - new_y)**2)
+                #     if dis <= radius:
+                #         reward -= 10
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
@@ -238,12 +250,12 @@ class UavEnvironment:
                             mindis = 0
                     reward -= mindis * 0.001
                     # 判断是否在其他无人机附近
-                    radius = 2 * uav.v_max
-                    reward += 10  # 新的位置在自身原来的位置附近
-                    for uav in self.uavs:
-                        dis = np.sqrt((uav.x - new_x) ** 2 + (uav.y - new_y) ** 2)
-                        if dis <= radius:
-                            reward -= 10
+                    # radius = 2 * uav.v_max
+                    # reward += 10  # 新的位置在自身原来的位置附近
+                    # for uav in self.uavs:
+                    #     dis = np.sqrt((uav.x - new_x) ** 2 + (uav.y - new_y) ** 2)
+                    #     if dis <= radius:
+                    #         reward -= 10
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:

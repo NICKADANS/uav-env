@@ -32,7 +32,7 @@ if __name__ == "__main__":
     pois = np.load("../data/pois.npy", allow_pickle=True)
     obstacles = []
     n_agents = 2
-    env = UavEnvironment(pois, obstacles, n_agents)
+    env = UavEnvironment(pois, obstacles, n_agents, uav_init_pos=[])
     env.is_render = True
     env.share_reward = True
 
