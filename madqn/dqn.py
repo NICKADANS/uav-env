@@ -54,6 +54,10 @@ class DeepQTable:
 
     @torch.no_grad()
     def play_step(self, epsilon=0.0, render=False):
+        save_exp = [True for _ in range(self.n_agents)]
+        for i in range(self.n_agents):
+            if self.env.uavs[i].energy == 0:
+                save_exp[i] = False
         actions = self.select_actions(self.state, epsilon)
         if render is True:
             cv2.imshow("env", self.env.render.image)
@@ -62,8 +66,9 @@ class DeepQTable:
         # do step in the environment
         new_obs, reward, dones, _ = self.env.step(actions)
         for i in range(self.n_agents):
-            exp = Experience(self.state[i], actions[i], reward[i], dones[i], new_obs[i])
-            self.buffer.append(exp)
+            if save_exp[i] is True:
+                exp = Experience(self.state[i], actions[i], reward[i], dones[i], new_obs[i])
+                self.buffer.append(exp)
         self.total_reward += reward[0]
         self.state = new_obs
         gameover = True
@@ -73,9 +78,8 @@ class DeepQTable:
                 break
         done_reward = None
         if gameover:
-            cv2.imshow("env", self.env.render.image)
-            cv2.waitKey(0)
             done_reward = self.total_reward
+            print("poi_done: ", self.env.poi_done)
             self._reset()
         return done_reward, gameover
 

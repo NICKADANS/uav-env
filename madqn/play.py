@@ -23,7 +23,7 @@ if __name__ == "__main__":
     MAX_EPISODES = 1
     MAX_STEPS = 200
     pois = np.load("../data/pois.npy", allow_pickle=True)
-    obstacles = []
+    obstacles = [[650, 650], [300, 400]]
     n_agents = 2
     env = UavEnvironment(pois, obstacles, n_agents, uav_init_pos=[])
     env.is_render = True
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # dqn
     dqn = DeepQTable(env, env.obsvervation_space.dim, env.action_space.n, n_agents, device)
-    dqn.load_models(521)
+    dqn.load_models(508)
 
     for ep in range(MAX_EPISODES):
         gameover = False

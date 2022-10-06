@@ -93,7 +93,6 @@ class ActionSpace:
 
     def sample(self):
         indices = np.random.choice(len(self.actions))
-        print(indices)
         return indices
 
 
@@ -144,7 +143,7 @@ class UavEnvironment:
         i = 0
         # 为每个无人机执行行为
         for uav in self.uavs:
-            _, _, reward, _ = self._step(uav, actions[i])
+            reward = self._step(uav, actions[i])
             reward_n.append(reward)
             i += 1
         # 计算是否完成
@@ -224,7 +223,7 @@ class UavEnvironment:
                     uav.y = 999
         else:  # 没电执行下一步动作
             uav.energy = 0
-        return uav.obs, action, reward, None
+        return reward
 
     # 估计执行一步action所得的奖励
     def cal_reward(self, action):
