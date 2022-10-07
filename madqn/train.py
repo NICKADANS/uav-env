@@ -32,10 +32,10 @@ if __name__ == "__main__":
     pois = np.load("../data/pois.npy", allow_pickle=True)
     obstacles = []
     n_agents = 2
-    uav_init_pos = [[250, 250], [750, 750]]
+    uav_init_pos = []
     env = UavEnvironment(pois, obstacles, n_agents, uav_init_pos)
     env.is_render = True
-    env.share_reward = True
+    env.share_reward = False
 
     S_DIM = (env.obsvervation_space.dim[0], env.obsvervation_space.dim[1], env.obsvervation_space.dim[2])
     A_DIM = env.action_space.n

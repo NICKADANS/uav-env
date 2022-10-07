@@ -69,7 +69,7 @@ class DeepQTable:
             if save_exp[i] is True:
                 exp = Experience(self.state[i], actions[i], reward[i], dones[i], new_obs[i])
                 self.buffer.append(exp)
-        self.total_reward += reward[0]
+        self.total_reward += np.sum(reward)
         self.state = new_obs
         gameover = True
         for d in dones:

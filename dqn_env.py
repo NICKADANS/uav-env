@@ -148,7 +148,7 @@ class UavEnvironment:
             i += 1
         # 计算是否完成
         for uav in self.uavs:
-            if uav.energy != 0:
+            if uav.energy > 0:
                 done_n.append(0)
             else:
                 done_n.append(1)
@@ -183,7 +183,7 @@ class UavEnvironment:
                         dis = np.sqrt((poi.x - new_x)**2 + (poi.y - new_y)**2)
                         mindis = dis if dis < mindis else mindis
                         if dis <= radius :
-                            reward += 5
+                            reward += 10
                             poi.done = 1
                             self.poi_done += 1
                             mindis = 0
