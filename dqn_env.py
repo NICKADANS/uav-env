@@ -9,7 +9,7 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
-from compare import greedy, random
+from compare import local_greedy, random
 from poi import PoI
 
 
@@ -86,9 +86,9 @@ class ObservationSpace:
 
 # 对于每个Agent的行为空间
 class ActionSpace:
-    def __init__(self, uavs):
+    def __init__(self):
         # 行为空间维度
-        self.n = 9  # 无人机的速度
+        self.n = 9
         self.actions = [(-20, 0), (20, 0), (0, 0), (0, 20), (0, -20), (10, 10), (-10, 10), (10, -10), (-10, -10)]
 
     def sample(self):
@@ -101,6 +101,17 @@ class UavEnvironment:
         # 初始化障碍物/兴趣点/无人机，保存初始兴趣点状态
         self.pois = deepcopy(pois)
         self.obstacles = obstacles
+        delete_pois = []
+        # 清洗在obs中的poi
+        for i, poi in enumerate(self.pois):
+            for obstacle in self.obstacles:
+                dis = np.sqrt((obstacle[0] - poi.x) ** 2 + (obstacle[1] - poi.y) ** 2)
+                if dis <= common.OBS_RADIUS:
+                    delete_pois.append(i)
+                    break
+        print('delete pois: ', delete_pois)
+        self.pois = np.delete(self.pois, delete_pois)
+
         if len(uav_init_pos) != uav_num:
             self.uavs = [UAV(color=common.UAV_COLOR[i]) for i in range(uav_num)]
         else:
@@ -113,7 +124,7 @@ class UavEnvironment:
 
         # 初始化观测空间和行为空间，保存初始观测值
         self.obsvervation_space = ObservationSpace(self.uavs)
-        self.action_space = ActionSpace(self.uavs)
+        self.action_space = ActionSpace()
         # 初始化渲染
         self.render = UavEnvRender(pois=self.pois, obstacles=self.obstacles)
         self.is_render = True # 默认开启渲染
@@ -183,7 +194,7 @@ class UavEnvironment:
                         dis = np.sqrt((poi.x - new_x)**2 + (poi.y - new_y)**2)
                         mindis = dis if dis < mindis else mindis
                         if dis <= radius :
-                            reward += 10
+                            reward += 5
                             poi.done = 1
                             self.poi_done += 1
                             mindis = 0
@@ -200,7 +211,8 @@ class UavEnvironment:
                 # 判断是否撞到了障碍物
                 radius = common.OBS_RADIUS
                 for obstacle in self.obstacles:
-                    if (obstacle[0] - new_x)**2 + (obstacle[1] - new_y)**2 <= radius**2:
+                    dis = np.sqrt((obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2)
+                    if dis <= radius:
                         reward -= 100
                         uav.energy = 0
                         break
@@ -225,10 +237,11 @@ class UavEnvironment:
             uav.energy = 0
         return reward
 
-    # 估计执行一步action所得的奖励
-    def cal_reward(self, action):
+    # 估计执行所有actions所得的奖励
+    def cal_reward(self, actions):
         total_reward = 0
         for i, uav in enumerate(self.uavs):
+            action = actions[i]
             # 没电执行下一步动作
             reward = 0
             if uav.energy >= uav.cal_energy_loss(action):
@@ -236,17 +249,16 @@ class UavEnvironment:
                 new_y = uav.y + self.action_space.actions[action][1]
                 # 如果无人机下一步位于界内
                 if 0 <= new_x < 1000 and 0 <= new_y < 1000:
-                    # 如果无人机什么都没做
-                    reward = 0
-                    mindis = 2000
+                    # 判断是否采集了某个兴趣点
                     radius = 20
-                    # 如果无人机在采集兴趣点
+                    mindis = 2000
                     for poi in self.pois:
-                        dis = np.sqrt((poi.x - new_x) ** 2 + (poi.y - new_y) ** 2)
-                        mindis = dis if dis < mindis else mindis
-                        if dis <= radius:
-                            reward += 5
-                            mindis = 0
+                        if poi.done == 0:
+                            dis = np.sqrt((poi.x - new_x) ** 2 + (poi.y - new_y) ** 2)
+                            mindis = dis if dis < mindis else mindis
+                            if dis <= radius:
+                                reward += 5
+                                mindis = 0
                     reward -= mindis * 0.001
                     # 判断是否在其他无人机附近
                     # radius = 2 * uav.v_max
@@ -258,7 +270,8 @@ class UavEnvironment:
                     # 如果无人机撞到障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
-                        if (obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2 <= radius ** 2:
+                        dis = np.sqrt((obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2)
+                        if dis <= radius:
                             reward -= 100
                             break
                 # 如果无人机位于界外
@@ -292,6 +305,7 @@ if __name__ == "__main__":
     obstacles = [[650, 650], [300, 400]]
     n_agents = 2
     env = UavEnvironment(pois, obstacles, n_agents)
+    env.share_reward = False
     for i in range(0, 100):
         env.reset()
         gameover = False
@@ -303,11 +317,11 @@ if __name__ == "__main__":
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
             actions = []
-            for i in range(n_agents):
-                action = env.action_space.sample()
-                actions.append(action)
+            # for i in range(n_agents):
+            #     action = env.action_space.sample()
+            #     actions.append(action)
+            actions = local_greedy.select_actions(env)
             obs, rewards, dones, _ = env.step(actions)
-            print(rewards)
             # print(obs)
             # 判断游戏是否结束
             gameover = True

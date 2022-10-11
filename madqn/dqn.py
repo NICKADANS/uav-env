@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from buffer import ExperienceBuffer
+from compare import local_greedy
 
 
 
@@ -53,12 +54,16 @@ class DeepQTable:
         return actions
 
     @torch.no_grad()
-    def play_step(self, epsilon=0.0, render=False):
+    def play_step(self, epsilon=0.0, render=False, gdqn=False):
         save_exp = [True for _ in range(self.n_agents)]
         for i in range(self.n_agents):
             if self.env.uavs[i].energy == 0:
                 save_exp[i] = False
         actions = self.select_actions(self.state, epsilon)
+        if gdqn is True:
+            greedy_actions = local_greedy.select_actions(self.env)
+            if self.env.cal_reward(actions) < self.env.cal_reward(greedy_actions):
+                actions = greedy_actions
         if render is True:
             cv2.imshow("env", self.env.render.image)
             print(actions, self.env.uavs[0].energy)

@@ -7,7 +7,7 @@ import numpy as np
 import torch as th
 import cv2
 import time
-from compare import greedy
+from compare import global_greedy
 
 if __name__ == "__main__":
     # 是否载入模型

@@ -6,7 +6,7 @@ from qlearning import QLearningTable
 
 sys.path.append('..')
 from uav_env import UavEnvironment
-from compare import greedy
+from compare import global_greedy
 
 MAX_EPISODES = 50
 MAX_STEPS = 200

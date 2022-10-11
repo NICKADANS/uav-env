@@ -12,7 +12,7 @@ from uav_env import UavEnvironment
 import ddpg
 import buffer
 import utils
-from compare import greedy
+from compare import global_greedy
 
 MAX_EPISODES = 5000
 MAX_STEPS = 200

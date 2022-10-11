@@ -9,7 +9,7 @@ import common
 import cv2
 import numpy as np
 from uav import UAV
-from compare import greedy, random
+from compare import global_greedy, random
 from poi import PoI
 
 
@@ -267,7 +267,7 @@ if __name__ == "__main__":
             # '''
             # for uav in env.uavs:
             #     actions.append(2 * np.random.random(2) - 1)
-            actions = greedy.select_actions(env)
+            actions = global_greedy.select_actions(env)
             obs, rewards, dones, _ = env.step(actions)
             # print(obs)
             # 判断游戏是否结束
