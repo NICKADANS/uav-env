@@ -8,11 +8,9 @@ from dqn import DeepQTable
 sys.path.append('..')
 from dqn_env import UavEnvironment
 
-GAMMA = 0.99
-BATCH_SIZE = 32
+
 REPLAY_SIZE = 50000
 LEARNING_RATE = 1e-4
-REPLAY_START_SIZE = 10000
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -37,7 +35,7 @@ if __name__ == "__main__":
 
     # dqn
     dqn = DeepQTable(env, env.obsvervation_space.dim, env.action_space.n, n_agents, device)
-    dqn.load_models(212)
+    dqn.load_models(83)
 
     for ep in range(MAX_EPISODES):
         gameover = False

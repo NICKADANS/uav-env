@@ -14,10 +14,10 @@ sys.path.append('..')
 from compare import local_greedy
 
 
-REPLAY_SIZE = 10000
+REPLAY_SIZE = 50000
 LEARNING_RATE = 1e-4
 GAMMA = 0.99
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 
 class DeepQTable:
     def __init__(self, env, obs_shape, n_actions, n_agents, device="cpu"):
@@ -93,15 +93,14 @@ class DeepQTable:
             states, actions, rewards, dones, next_states = batch
             states_v = torch.tensor(np.array(states, copy=False)).to(self.device)
             next_states_v = torch.tensor(np.array(next_states, copy=False)).to(self.device)
-            actions_v = torch.tensor(actions).type(torch.int64)
-            actions_v = actions_v.to(self.device)
+            actions_v = torch.tensor(actions).type(torch.int64).to(self.device)
             rewards_v = torch.tensor(rewards).to(self.device)
             done_mask = torch.LongTensor(dones).to(self.device)
             state_action_values = self.nets[i](states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
             with torch.no_grad():
                 next_state_values = self.tgt_nets[i](next_states_v).max(1)[0]
                 for _ in range(len(next_state_values)):
-                    if done_mask[_] == 1:
+                    if done_mask[_] > 0.5:
                         next_state_values[_] = 0.0
                 next_state_values = next_state_values.detach()
             expected_state_action_values = next_state_values * GAMMA + rewards_v

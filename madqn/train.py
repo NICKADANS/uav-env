@@ -10,11 +10,10 @@ from dqn import DeepQTable
 sys.path.append('..')
 from dqn_env import UavEnvironment
 
-GAMMA = 0.99
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 SYNC_TARGET_FRAMES = 1000
-START_TRAINING_EPISODE = 10
+START_TRAINING_EPISODE = 1
 
 EPSILON_DECAY_LAST_FRAME = 200000
 EPSILON_START = 1.0
@@ -27,7 +26,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if args.cuda else "cpu")
 
     MAX_EPISODES = 5000
-    MAX_STEPS = 200
     pois = np.load("../data/pois.npy", allow_pickle=True)
     obstacles = []
     n_agents = 2
@@ -60,8 +58,8 @@ if __name__ == "__main__":
             if reward is not None:
                 total_rewards.append(reward)
                 m_reward = np.mean(total_rewards[-100:])
-                print(
-                    "%d: done %d games, reward %.3f, " "eps %.2f" % (frame_idx, len(total_rewards), m_reward, epsilon,))
+                print("%d: done %d games, reward %.3f, avg %.3f, eps %.2f"
+                      % (frame_idx, len(total_rewards), total_rewards[-1], m_reward, epsilon,))
                 if best_m_reward is None or int(best_m_reward + 2) < int(m_reward):
                     dqn.save_models(int(m_reward))
                     if best_m_reward is not None:
