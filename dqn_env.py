@@ -191,9 +191,9 @@ class UavEnvironment:
                 mindis = 2000
                 for poi in self.pois:
                     if poi.done == 0:
-                        dis = np.sqrt((poi.x - new_x)**2 + (poi.y - new_y)**2)
+                        dis = np.sqrt((poi.x - new_x)**2 + (poi.y - new_y)**2)[0]
                         mindis = dis if dis < mindis else mindis
-                        if dis <= radius :
+                        if dis <= radius:
                             reward += 5
                             poi.done = 1
                             self.poi_done += 1

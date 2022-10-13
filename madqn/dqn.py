@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from buffer import ExperienceBuffer
+import sys
+sys.path.append('..')
 from compare import local_greedy
 
 
