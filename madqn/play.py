@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # dqn
     dqn = DeepQTable(env, env.obsvervation_space.dim, env.action_space.n, n_agents, device)
-    dqn.load_models(588)
+    dqn.load_models(212)
 
     for ep in range(MAX_EPISODES):
         gameover = False

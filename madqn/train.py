@@ -12,10 +12,9 @@ from dqn_env import UavEnvironment
 
 GAMMA = 0.99
 BATCH_SIZE = 32
-REPLAY_SIZE = 50000
 LEARNING_RATE = 1e-4
 SYNC_TARGET_FRAMES = 1000
-REPLAY_START_SIZE = 10000
+START_TRAINING_EPISODE = 1
 
 EPSILON_DECAY_LAST_FRAME = 200000
 EPSILON_START = 1.0
@@ -69,7 +68,7 @@ if __name__ == "__main__":
                         print("Best reward updated %.3f -> %.3f" % (best_m_reward, m_reward))
                     best_m_reward = m_reward
 
-            if len(dqn.buffer) < REPLAY_START_SIZE:
+            if ep < START_TRAINING_EPISODE:
                 continue
 
             if frame_idx % SYNC_TARGET_FRAMES == 0:

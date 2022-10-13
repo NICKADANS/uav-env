@@ -12,14 +12,9 @@ from buffer import ExperienceBuffer
 from compare import local_greedy
 
 
-
-REPLAY_SIZE = 50000
+REPLAY_SIZE = 10000
 LEARNING_RATE = 1e-4
-SYNC_TARGET_FRAMES = 1000
-REPLAY_START_SIZE = 10000
-
 GAMMA = 0.99
-BUFFER_MAX_SIZE = 50000
 BATCH_SIZE = 32
 
 class DeepQTable:
@@ -29,7 +24,7 @@ class DeepQTable:
         self.n_agents = n_agents
         self.nets = [DQN(obs_shape, n_actions).to(device) for _ in range(n_agents)]
         self.tgt_nets = [DQN(obs_shape, n_actions).to(device) for _ in range(n_agents)]
-        self.buffer = ExperienceBuffer(REPLAY_SIZE)
+        self.buffer = [ExperienceBuffer(REPLAY_SIZE) for _ in range(n_agents)]
         self.optimizers = [optim.Adam(net.parameters(), lr=LEARNING_RATE) for net in self.nets]
         self._reset()
 
@@ -62,7 +57,7 @@ class DeepQTable:
         actions = self.select_actions(self.state, epsilon)
         if gdqn is True:
             greedy_actions = local_greedy.select_actions(self.env)
-            if self.env.cal_reward(actions) < self.env.cal_reward(greedy_actions):
+            if self.env.cal_reward(actions) < self.env.cal_reward(greedy_actions) + 0.01:
                 actions = greedy_actions
         if render is True:
             cv2.imshow("env", self.env.render.image)
@@ -73,7 +68,7 @@ class DeepQTable:
         for i in range(self.n_agents):
             if save_exp[i] is True:
                 exp = Experience(self.state[i], actions[i], reward[i], dones[i], new_obs[i])
-                self.buffer.append(exp)
+                self.buffer[i].append(exp)
         self.total_reward += np.sum(reward)
         self.state = new_obs
         gameover = True
@@ -92,17 +87,20 @@ class DeepQTable:
         for i in range(self.n_agents):
             self.optimizers[i].zero_grad()
             # 计算Target-Q和Q网络的误差
-            batch = self.buffer.sample(BATCH_SIZE)
+            batch = self.buffer[i].sample(BATCH_SIZE)
             states, actions, rewards, dones, next_states = batch
             states_v = torch.tensor(np.array(states, copy=False)).to(self.device)
             next_states_v = torch.tensor(np.array(next_states, copy=False)).to(self.device)
-            actions_v = torch.tensor(actions).to(self.device)
+            actions_v = torch.tensor(actions).type(torch.int64)
+            actions_v = actions_v.to(self.device)
             rewards_v = torch.tensor(rewards).to(self.device)
-            done_mask = torch.tensor(dones).to(self.device)
+            done_mask = torch.LongTensor(dones).to(self.device)
             state_action_values = self.nets[i](states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
             with torch.no_grad():
                 next_state_values = self.tgt_nets[i](next_states_v).max(1)[0]
-                next_state_values[done_mask] = 0.0
+                for _ in range(len(next_state_values)):
+                    if done_mask[_] == 1:
+                        next_state_values[_] = 0.0
                 next_state_values = next_state_values.detach()
             expected_state_action_values = next_state_values * GAMMA + rewards_v
             loss_t = nn.MSELoss()(state_action_values, expected_state_action_values)

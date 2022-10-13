@@ -260,14 +260,7 @@ class UavEnvironment:
                                 reward += 5
                                 mindis = 0
                     reward -= mindis * 0.001
-                    # 判断是否在其他无人机附近
-                    # radius = 2 * uav.v_max
-                    # reward += 10  # 新的位置在自身原来的位置附近
-                    # for uav in self.uavs:
-                    #     dis = np.sqrt((uav.x - new_x) ** 2 + (uav.y - new_y) ** 2)
-                    #     if dis <= radius:
-                    #         reward -= 10
-                    # 如果无人机撞到障碍物
+                    # 判断是否碰了障碍物
                     radius = common.OBS_RADIUS
                     for obstacle in self.obstacles:
                         dis = np.sqrt((obstacle[0] - new_x) ** 2 + (obstacle[1] - new_y) ** 2)

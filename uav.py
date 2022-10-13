@@ -31,4 +31,4 @@ class UAV:
 
     # 计算执行某个行为的能量损耗(绝对值)
     def cal_energy_loss(self, action):
-        return 0.005
+        return 0.010
