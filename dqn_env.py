@@ -88,8 +88,8 @@ class ObservationSpace:
 class ActionSpace:
     def __init__(self):
         # 行为空间维度
-        self.n = 9
-        self.actions = [(-20, 0), (20, 0), (0, 0), (0, 20), (0, -20), (10, 10), (-10, 10), (10, -10), (-10, -10)]
+        self.n = 8
+        self.actions = [(-20, 0), (20, 0), (0, 20), (0, -20), (10, 10), (-10, 10), (10, -10), (-10, -10)]
 
     def sample(self):
         indices = np.random.choice(len(self.actions))

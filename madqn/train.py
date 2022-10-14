@@ -12,7 +12,7 @@ from dqn_env import UavEnvironment
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
-SYNC_TARGET_FRAMES = 1000
+SYNC_TARGET_FRAMES = 500
 START_TRAINING_EPISODE = 1
 
 EPSILON_DECAY_LAST_FRAME = 200000
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     pois = np.load("../data/pois.npy", allow_pickle=True)
     obstacles = []
     n_agents = 2
-    uav_init_pos = []
+    uav_init_pos = [[250, 250], [750, 750]]
     env = UavEnvironment(pois, obstacles, n_agents, uav_init_pos)
     env.is_render = True
     env.share_reward = False
